@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<meta name="description" content="MacroPilot 1.1 — acompanha mercados, explora relações macroeconómicas e testa estratégias com um agente de paper trading.">
+<link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icon-180.png"><link rel="stylesheet" href="/style.css">
+<title>MacroPilot — Laboratório de trading</title>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" id="sidebar" aria-label="Menu principal">
+    <div class="brand"><div class="brand-icon">⌁</div><div><b>MACRO<span>PILOT</span></b><small>INTELLIGENCE TERMINAL</small></div></div>
+    <div class="sidebar-caption">WORKSPACE</div>
+    <nav class="nav" aria-label="Secções">
+      <button class="nav-btn active" data-nav="overview"><span>▦</span> Visão geral</button>
+      <button class="nav-btn" data-nav="map"><span>◇</span> Mapa económico</button>
+      <button class="nav-btn" data-nav="strategy"><span>⛭</span> Estratégias</button>
+      <button class="nav-btn" data-nav="agent"><span>✳</span> Agente automático</button>
+      <button class="nav-btn" data-nav="journal"><span>▤</span> Diário virtual</button>
+      <button class="nav-btn" data-nav="settings"><span>⚙</span> Definições</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="agent-mini"><div class="mini-dot" id="sideAgentDot"></div><div><strong id="sideAgentText">Agente desligado</strong><small>Apenas conta de simulação</small></div></div>
+      <div class="version">MACROPILOT V1.1 <span>•</span> PAPER TRADING</div>
+    </div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-button mobile-menu" id="menuToggle" aria-label="Abrir menu">☰</button>
+      <div class="breadcrumb">TERMINAL <span>/</span> <strong id="pageLabel">VISÃO GERAL</strong></div>
+      <div class="top-actions"><span class="status-pill" id="feedPill"><span class="small-dot"></span> Dados demonstrativos</span><button class="btn btn-quiet btn-small" id="refreshBtn" title="Atualizar mercados">⟳ <span class="hide-mobile">Atualizar</span></button><span class="top-avatar">MP</span></div>
+    </header>
+    <div id="appMessage" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <section class="screen active" id="view-overview">
+      <div class="page-head"><div><div class="eyebrow">ANÁLISE DE MERCADO • SIMULAÇÃO</div><h1>O mercado, em perspetiva.</h1><p>Preços, fatores económicos e estratégias, num único painel.</p></div><button class="btn btn-primary" data-nav="agent">✳ Gerir agente</button></div>
+      <div class="notice" id="modeNotice"><span>◉</span><div><strong>Ambiente de demonstração.</strong> Os preços iniciais são fictícios e não representam cotações atuais. Toda a negociação é virtual.</div><button id="tryLiveBtn">Tentar dados externos ↗</button></div>
+      <div class="metrics-grid">
+        <article class="metric"><span class="metric-label">PATRIMÓNIO VIRTUAL</span><b class="metric-value" id="metricEquity">—</b><span class="metric-foot">Saldo + posições valorizadas</span></article>
+        <article class="metric"><span class="metric-label">RESULTADO VIRTUAL</span><b class="metric-value" id="metricPnl">—</b><span class="metric-foot">Face aos 10 000 USD iniciais</span></article>
+        <article class="metric"><span class="metric-label">POSIÇÕES ABERTAS</span><b class="metric-value" id="metricPositions">—</b><span class="metric-foot">Limites de risco ativos</span></article>
+        <article class="metric"><span class="metric-label">MOTOR DE SINAIS</span><b class="metric-value metric-agent" id="metricAgent">OFF</b><span class="metric-foot" id="metricAgentHint">A aguardar ativação</span></article>
+      </div>
+      <div class="overview-grid">
+        <article class="panel chart-panel"><div class="panel-heading"><div><span class="eyebrow">MONITORIZAÇÃO</span><h2 id="chartTitle">Ouro spot <small>GOLD</small></h2></div><div class="panel-heading-right"><span id="chartSource" class="tiny-badge">DADOS SINTÉTICOS</span><select id="assetSelect" aria-label="Selecionar ativo"></select></div></div>
+          <div class="chart-price"><b id="chartPrice">—</b><span class="change" id="chartChange">—</span></div><div class="chart-wrap"><canvas id="priceChart" aria-label="Gráfico do histórico de preços" role="img"></canvas></div>
+          <div class="chart-legend"><span>▰ Média móvel curta (SMA 5)</span><span id="chartTime">Histórico de demonstração</span></div>
+          <div class="signal-strip"><div><span class="signal-overline">LEITURA DA ESTRATÉGIA</span><strong id="signalText">A analisar…</strong><small id="signalReason">—</small></div><button class="btn btn-outline btn-small" id="manualBuyBtn">+ Comprar virtualmente</button></div>
+        </article>
+        <article class="panel watch-panel"><div class="panel-heading"><div><span class="eyebrow">WATCHLIST</span><h2>Ativos monitorizados</h2></div><span class="tiny-muted">Toca para explorar</span></div><div id="watchlist" class="watchlist"></div></article>
+      </div>
+      <div class="overview-bottom">
+        <article class="panel"><div class="panel-heading"><div><span class="eyebrow">CENÁRIO CONFIGURADO</span><h2>Forças macroeconómicas</h2></div><button class="text-button" data-nav="map">Ver mapa completo ↗</button></div><div class="factor-mini-grid" id="factorSnapshot"></div><p class="fine-print">Os valores do cenário são hipóteses ajustadas pelo utilizador, não indicadores económicos publicados.</p></article>
+        <article class="panel"><div class="panel-heading"><div><span class="eyebrow">FLUXO DE INFORMAÇÃO</span><h2>Notícias económicas</h2></div><span class="tiny-muted" id="newsStatus">A carregar</span></div><div id="newsList" class="news-list"><p class="muted">As notícias ficam disponíveis com a função de dados publicada.</p></div></article>
+      </div>
+    </section>
+
+    <section class="screen" id="view-map">
+      <div class="page-head"><div><div class="eyebrow">MAPA DE CAUSAS E EFEITOS</div><h1>Mapa económico interativo.</h1><p>Experimenta cenários. As relações são tendências hipotéticas, não certezas.</p></div><button id="neutralMacro" class="btn btn-outline">↺ Repor cenário neutro</button></div>
+      <div class="notice notice-soft"><span>ⓘ</span><div><strong>Interpretação, não previsão.</strong> Uma alteração na inflação ou nos juros pode ter efeitos diferentes dependendo do contexto, expectativas e reação do mercado. Os choques abaixo são manuais e não alteram as cotações recebidas.</div></div>
+      <div class="map-grid"><article class="panel"><div class="panel-heading"><div><span class="eyebrow">ENTRADAS</span><h2>Fatores económicos</h2></div></div><div id="macroSliders"></div></article><article class="panel"><div class="panel-heading"><div><span class="eyebrow">RELAÇÕES</span><h2>Mapa de influência</h2></div></div><div class="economic-map" id="economicMap"></div></article></div>
+      <article class="panel"><div class="panel-heading"><div><span class="eyebrow">SENSIBILIDADE DO MODELO</span><h2>Impacto hipotético por ativo</h2></div></div><div class="impact-grid" id="impactGrid"></div><p class="fine-print">Pontuações heurísticas criadas para testes. Não são probabilidades, avaliações de ativos ou recomendações de compra.</p></article>
+      <article class="panel"><div class="panel-heading"><div><span class="eyebrow">DADOS PÚBLICOS</span><h2>Indicadores económicos publicados</h2></div><button class="text-button" id="refreshMacro">⟳ Atualizar</button></div><div class="macro-public" id="macroPublic"></div><p class="fine-print">BCE: câmbio de referência. Dados FRED (inflação EUA, Fed, desemprego, Treasury) exigem chave de API opcional.</p></article>
+      <article class="panel" id="intelPanel"><div class="panel-heading"><div><span class="eyebrow">ETAPA 3 · RADAR DE EVENTOS</span><h2>Notícias → hipóteses → risco</h2></div><span class="tiny-badge">Classificação por regras</span></div>
+      <p class="fine-print">Os títulos são classificados por temas económicos. Relações e sentidos indicados são <b>hipóteses</b>, não uma análise integral dos artigos, nem sinais de compra.</p>
+      <div class="intel-topics" id="newsTopicGrid"></div><div class="intel-briefing" id="newsBriefing"></div>
+      <div class="intel-actions"><div><strong>Cenário assistido por notícias</strong><p class="fine-print" id="scenarioProposal">Sem sugestão disponível.</p><small id="scenarioProvenance">Cenário definido manualmente.</small></div><button class="btn btn-outline" id="newsApply" disabled>Aplicar sugestão ao mapa</button></div></article>
+    </section>
+
+    <section class="screen" id="view-strategy">
+      <div class="page-head"><div><div class="eyebrow">LABORATÓRIO QUANTITATIVO</div><h1>Constrói a tua estratégia.</h1><p>Regras transparentes, risco parametrizável e execução apenas simulada.</p></div><button class="btn btn-primary" id="runStrategyBtn">▶ Avaliar agora</button></div>
+      <div class="strategy-grid"><article class="panel"><div class="panel-heading"><div><span class="eyebrow">CONFIGURAÇÃO</span><h2>Estratégia de tendência</h2></div><span class="tiny-badge">SMA 5/20 + RSI 14 + macro</span></div><div class="form-grid">
+        <label class="form-field">Ativo a analisar<select id="strategyAsset"></select></label>
+        <label class="form-field">Risco por posição (%)<input id="riskPct" type="number" min="0.1" max="2" step="0.1"></label>
+        <label class="form-field">Stop-loss (%)<input id="stopPct" type="number" min="0.5" max="15" step="0.5"></label>
+        <label class="form-field">Take-profit (%)<input id="takePct" type="number" min="0.5" max="30" step="0.5"></label>
+        <label class="form-field">Perda diária máxima (%)<input id="dailyLossPct" type="number" min="0.5" max="10" step="0.5"></label>
+        <label class="form-field">Máximo de posições<select id="maxPositions"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+        <label class="form-field">Confiança mínima heurística (0–90)<input id="minConfidence" type="number" min="50" max="90" step="1"></label>
+      </div><button class="btn btn-primary full-width" id="saveStrategy">Guardar regras</button><p class="fine-print">«Confiança» é uma pontuação de regras, não uma probabilidade estatística de sucesso. Sem alavancagem ou ordens reais.</p></article>
+      <article class="panel"><div class="panel-heading"><div><span class="eyebrow">RESULTADO</span><h2>Motor de avaliação</h2></div></div><div id="strategyResult" class="strategy-result"></div><div class="strategy-guide"><h3>Como decide o motor?</h3><ol><li>Requer pelo menos 20 preços históricos válidos.</li><li>Calcula médias móveis de 5 e 20 períodos e RSI de 14.</li><li>Combina a leitura técnica com o teu cenário macro.</li><li>Bloqueia entradas quando existem restrições de risco.</li></ol></div></article></div>
+    </section>
+
+    <section class="screen" id="view-agent">
+      <div class="page-head"><div><div class="eyebrow">AUTOMAÇÃO SUPERVISIONADA</div><h1>Agente de operações virtuais.</h1><p>Analisa sinais, gere posições e regista as decisões automaticamente enquanto a aplicação estiver aberta.</p></div><span class="tiny-badge strong">PAPER ONLY · SEM CORRETORA</span></div>
+      <div class="agent-grid"><article class="panel agent-control"><div class="panel-heading"><div><span class="eyebrow">ESTADO</span><h2>Automação</h2></div><div class="agent-switch"><span id="agentStatus">DESLIGADO</span><button id="agentToggle" class="switch" role="switch" aria-checked="false" aria-label="Ligar agente virtual"><span></span></button></div></div><div class="agent-hero"><div class="agent-orbit">✳</div><div><b id="agentHeroTitle">Motor em espera</b><p id="agentHeroText">Liga o agente para iniciar verificações periódicas. Só pode executar operações na carteira virtual.</p></div></div><div class="agent-facts"><div><small>INTERVALO</small><b>5 minutos</b></div><div><small>CAPITAL VIRTUAL</small><b id="agentCash">—</b></div><div><small>LIMITE POR OPERAÇÃO</small><b id="agentRisk">—</b></div><div><small>PRÓXIMA VERIFICAÇÃO</small><b id="nextScan">—</b></div></div><button class="btn btn-primary full-width" id="scanNow">▶ Analisar e executar regras agora</button><p class="fine-print">O agente para se fechares a página ou perderes a ligação. Para funcionamento 24/7 seriam necessários backend persistente, autenticação, filas e monitorização.</p></article>
+      <article class="panel"><div class="panel-heading"><div><span class="eyebrow">DECISÕES AUDITÁVEIS</span><h2>Registo do agente</h2></div><button class="text-button" id="clearLog">Limpar registo</button></div><div class="agent-log" id="agentLog"></div></article></div>
+      <article class="panel"><div class="panel-heading"><div><span class="eyebrow">ÚLTIMA AVALIAÇÃO</span><h2>Por que razão o agente decidiu?</h2></div></div><div class="agent-rationale" id="agentRationale"></div><p class="fine-print">O motor descreve regras aplicadas e bloqueios; não estima uma probabilidade de lucro.</p></article>
+      <article class="panel"><div class="panel-heading"><div><span class="eyebrow">PROTEÇÃO</span><h2>Guardas de segurança</h2></div></div><label class="gate-switch"><input type="checkbox" id="newsGateCheckbox" checked><span><strong>Filtro de eventos noticiosos</strong><small>Por defeito bloqueia novas compras virtuais de ativos afetados por títulos de potencial impacto publicados nas últimas 6 h. Com dados externos, bloqueia também se as notícias estiverem indisponíveis.</small></span></label><p class="fine-print" id="newsFreshness">A aguardar fonte de notícias.</p><div class="guard-grid"><div>✓ Sem alavancagem</div><div>✓ Stop-loss / take-profit</div><div>✓ Perda diária limitada</div><div>✓ Limite de posições</div><div>✓ Bloqueio por histórico insuficiente</div><div>✓ Sem acesso a contas reais</div></div></article>
+    </section>
+
+    <section class="screen" id="view-journal">
+      <div class="page-head"><div><div class="eyebrow">REGISTOS DA SIMULAÇÃO</div><h1>Diário de operações.</h1><p>Todas as posições e resultados são virtuais e ficam guardados apenas neste dispositivo.</p></div><button class="btn btn-outline" id="exportJournal">↓ Exportar JSON</button></div>
+      <div class="metrics-grid metrics-three"><article class="metric"><span class="metric-label">SALDO DISPONÍVEL</span><b class="metric-value" id="journalCash">—</b></article><article class="metric"><span class="metric-label">VALOR TOTAL</span><b class="metric-value" id="journalEquity">—</b></article><article class="metric"><span class="metric-label">RESULTADO REALIZADO HOJE</span><b class="metric-value" id="journalToday">—</b></article></div>
+      <article class="panel"><div class="panel-heading"><div><span class="eyebrow">CARTEIRA SIMULADA</span><h2>Posições abertas</h2></div></div><div class="table-scroll"><table><thead><tr><th>ATIVO</th><th>UNIDADES</th><th>ENTRADA</th><th>ATUAL</th><th>RESULTADO</th><th>AÇÃO</th></tr></thead><tbody id="positionsBody"></tbody></table></div></article>
+      <article class="panel"><div class="panel-heading"><div><span class="eyebrow">HISTÓRICO</span><h2>Operações registadas</h2></div></div><div class="table-scroll"><table><thead><tr><th>DATA</th><th>TIPO</th><th>ATIVO</th><th>UNIDADES</th><th>PREÇO</th><th>RESULTADO</th></tr></thead><tbody id="tradesBody"></tbody></table></div></article>
+    </section>
+
+    <section class="screen" id="view-settings">
+      <div class="page-head"><div><div class="eyebrow">CONFIGURAÇÃO DO TERMINAL</div><h1>Fontes e segurança.</h1><p>Compreende de onde vêm os dados e o que a app pode — ou não pode — fazer.</p></div></div>
+      <div class="setting-grid"><article class="panel"><div class="panel-heading"><div><span class="eyebrow">COTAÇÕES</span><h2>Modo de mercado</h2></div></div><div class="source-options"><button id="demoMode" class="source-choice"><strong>◈ Demonstração</strong><small>Séries inteiramente sintéticas, sem Internet. Ideal para testes.</small></button><button id="liveMode" class="source-choice"><strong>◉ Dados externos</strong><small>Consulta fontes públicas e APIs indicativas, quando disponíveis. Podem falhar ou apresentar atraso.</small></button></div><div id="sourcesHealth" class="source-health"></div></article>
+      <article class="panel"><div class="panel-heading"><div><span class="eyebrow">DADOS ECONÓMICOS</span><h2>Fornecedores</h2></div></div><div class="provider-list"><div><strong>Gold API</strong><span>Ouro spot, quando disponível</span></div><div><strong>Twelve Data API (opcional)</strong><span>Histórico diário de ações, ETFs, ouro e câmbio; sujeito à cobertura e ao plano da chave</span></div><div><strong>Finnhub (opcional, cotação pontual)</strong><span>Cotações de ações mediante chave pessoal no servidor</span></div><div><strong>Banco Central Europeu</strong><span>Referência cambial EUR/USD</span></div><div><strong>FRED (opcional)</strong><span>Juros, inflação e outros indicadores dos EUA</span></div><div><strong>Google News RSS</strong><span>Manchetes económicas externas</span></div></div><p class="fine-print">Para chaves opcionais configura TWELVE_DATA_API_KEY, FINNHUB_API_KEY e FRED_API_KEY em Netlify → Environment variables. Nunca coloques chaves no código do navegador.</p></article>
+      <article class="panel danger-panel"><div class="panel-heading"><div><span class="eyebrow">DADOS LOCAIS</span><h2>Repor simulação</h2></div></div><p>Elimina posições, operações e configurações guardadas neste navegador. Não altera contas bancárias ou corretoras.</p><button class="btn btn-danger" id="resetApp">Apagar dados virtuais</button></article>
+      <article class="panel"><div class="panel-heading"><div><span class="eyebrow">LIMITAÇÕES</span><h2>O que esta versão faz</h2></div></div><p>O agente executa apenas ordens fictícias e guarda dados localmente. Não contém integração com corretoras, não garante ganhos, não executa tarefas com a app fechada e não envia notificações push em segundo plano.</p><p class="fine-print">Informação educativa e experimental; não constitui aconselhamento financeiro.</p></article></div>
+    </section>
+    <footer class="footer">MACROPILOT 1.1 • LABORATÓRIO DE TRADING <span>O trading envolve risco. Sem execução de ordens reais.</span></footer>
+  </main>
+</div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

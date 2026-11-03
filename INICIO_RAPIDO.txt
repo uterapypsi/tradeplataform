@@ -1,0 +1,19 @@
+MACROPILOT AI 1.1 — ETAPA 3
+
+PACOTE DE DEMONSTRAÇÃO (sem chaves):
+1. Extrai MacroPilot_Etapa3_Demo_Estatico.zip.
+2. Arrasta os ficheiros extraídos para https://app.netlify.com/drop
+3. Abre a URL HTTPS e escolhe DEMONSTRAÇÃO.
+4. No iPhone: Safari → Partilhar → Adicionar ao ecrã principal.
+
+PACOTE COMPLETO (dados externos):
+1. Extrai MacroPilot_Etapa3_Projeto_Completo.zip.
+2. Coloca o conteúdo em repositório Git e importa-o no Netlify.
+3. Publica com netlify.toml; o site publica a pasta public e as funções netlify/functions.
+4. Configura TWELVE_DATA_API_KEY e FRED_API_KEY em variáveis de ambiente do Netlify, se quiseres essas fontes. FINNHUB_API_KEY é opcional.
+5. Faz um novo deploy; escolhe Dados externos em Definições.
+
+NOVIDADES: radar económico de títulos, proposta manual de cenário, travão automático por notícias relevantes, explicação das decisões.
+AVISO: a app faz apenas paper trading, nunca envia ordens reais, não trabalha no fundo nem garante ganhos. Os dados DEMO são fictícios. O modo de dados externos exige publicação completa; a simples publicação estática não inclui as funções.
+
+LEITURA COMPLETA: README.md no ZIP do projeto completo.
