@@ -5,7 +5,7 @@ const fred = {
   FED: {id:'FEDFUNDS',name:'Taxa efetiva Fed',unit:'%'}
 };
 const env = (k) => (typeof Netlify !== 'undefined' && Netlify.env ? Netlify.env.get(k) : process.env[k]);
-const timedFetch = async url => {const c=new AbortController(),t=setTimeout(()=>c.abort(),6000);try{const r=await fetch(url,{signal:c.signal,headers:headers:{Accept:url.includes('data-api.ecb.europa.eu')?'text/csv':'application/json'}});if(!r.ok)throw Error('HTTP '+r.status);return r;} finally{clearTimeout(t);}};
+const timedFetch = async url => {const c=new AbortController(),t=setTimeout(()=>c.abort(),6000);try{const r=await fetch(url,{signal:c.signal,headers:{Accept:url.includes('data-api.ecb.europa.eu')?'text/csv':'application/json'}});if(!r.ok)throw Error('HTTP '+r.status);return r;} finally{clearTimeout(t);}};
 function csvParseLine(line){return [...line.matchAll(/(?:^|,)(?:"((?:[^"]|"")*)"|([^,]*))/g)].map(m=>(m[1] ?? m[2] ?? '').replaceAll('""','"'));}
 export async function getECB(){
   const url='https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A?lastNObservations=2&format=csvdata';
