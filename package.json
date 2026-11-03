@@ -1,12 +1,15 @@
 {
   "name": "macropilot",
   "private": true,
-  "version": "1.1.0",
-  "description": "PWA para análise macroeconómica, estratégias e paper trading",
+  "version": "2.0.0",
+  "description": "MacroPilot 1.1 e GoldBot 2.0 (paper trading agendado em Netlify)",
   "type": "module",
   "scripts": {
     "dev": "netlify dev",
-    "check": "node --check public/app.js && node --check public/engine.js && node --check public/intelligence.js && node --check netlify/functions/market.mjs && node --check netlify/functions/macro.mjs && node --check netlify/functions/news.mjs",
+    "check": "node --check public/app.js && node --check public/engine.js && node --check public/intelligence.js && node --check netlify/functions/market.mjs && node --check netlify/functions/macro.mjs && node --check netlify/functions/news.mjs && node --check netlify/lib/goldbot-core.mjs && node --check netlify/lib/goldbot-services.mjs && node --check netlify/functions/goldbot-scheduled.mjs && node --check netlify/functions/goldbot-status.mjs && node --check netlify/lib/goldbot-auth.mjs && node --check netlify/functions/goldbot-control.mjs",
     "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@netlify/blobs": "11.1.7"
   }
 }

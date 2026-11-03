@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>GoldBot AI 2.0 — Monitor privado</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#151e31;--line:#30435c;--lime:#c7ee86;--text:#eef4ff;--muted:#9aabc3}
+*{box-sizing:border-box}body{background:var(--bg);color:var(--text);font:16px system-ui,-apple-system,sans-serif;max-width:900px;margin:auto;padding:24px 16px 56px}
+a{color:var(--lime)}h1{margin:8px 0;font-size:clamp(28px,5vw,42px)}h2{font-size:20px;margin:4px 0 18px}p{line-height:1.55}small,.muted{color:var(--muted)}.eyebrow{color:var(--lime);font-size:12px;letter-spacing:.16em;font-weight:700;text-transform:uppercase}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px;margin:16px 0}.controls{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.controls input{flex:1;min-width:190px;background:#0b1020;border:1px solid #4d6077;color:white;border-radius:11px;padding:13px;font-size:16px}.controls button{background:var(--lime);color:#152112;border:0;border-radius:11px;font-weight:800;font-size:16px;padding:13px 20px;cursor:pointer}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.metric{background:#0b1425;border-radius:12px;padding:15px}.metric b{display:block;font-size:22px;margin-top:5px}.tag{display:inline-block;border-radius:40px;background:#2e4033;color:var(--lime);padding:6px 12px;font-size:12px;font-weight:800}ul{padding-left:20px}li{margin:12px 0;line-height:1.4;border-bottom:1px solid #28364d;padding-bottom:9px;overflow-wrap:anywhere}.warn{color:#ffcf86}table{width:100%;border-collapse:collapse}td,th{padding:10px 4px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}#result{white-space:pre-wrap;overflow-wrap:anywhere}header{display:flex;justify-content:space-between;align-items:center;gap:20px} .help{font-size:14px}
+</style>
+</head>
+<body>
+<header><span class="eyebrow">GOLDBOT AI 2.0 • PAPER ONLY</span><a href="/">Voltar ao MacroPilot</a></header>
+<h1>Monitor do agente no servidor</h1>
+<p class="muted">Consulta privada de um motor autónomo de simulação. Nenhuma ordem é enviada para uma corretora; a execução depende do agendamento Netlify e das fontes externas.</p>
+<section class="panel"><h2>Acesso privado</h2><p class="help">Introduz a chave <code>GOLDBOT_V2_ADMIN_TOKEN</code> configurada no Netlify. Não fica guardada no navegador e não deve ser partilhada.</p>
+<form id="auth" class="controls"><input id="token" type="password" minlength="24" autocomplete="off" placeholder="Chave privada de consulta" required><button type="submit">Consultar estado</button></form>
+<div id="result" role="status" class="muted">Sem consulta efetuada.</div>
+<div class="controls"><button type="button" id="start" hidden>Ativar simulação no servidor</button><button type="button" id="pause" hidden>Pausar agente</button></div></section>
+<section id="dashboard" hidden>
+<section class="panel"><span class="eyebrow">Estado do serviço</span><h2 id="stateTitle">—</h2><p id="lastRun" class="muted"></p><div class="metrics"><div class="metric">Saldo virtual<b id="cash">—</b></div><div class="metric">Posições abertas<b id="positions">—</b></div><div class="metric">Operações registadas<b id="trades">—</b></div><div class="metric">Última cotação<b id="price">—</b></div></div></section>
+<section class="panel"><span class="eyebrow">Registo persistente</span><h2>Últimas decisões</h2><ul id="events"></ul></section>
+</section>
+<p class="help warn">Dados diários: stops virtuais são verificados apenas nos fechos recebidos. O agendamento não garante execução contínua sem interrupções, e as regras não garantem lucros.</p>
+<script>
+const $=x=>document.getElementById(x),usd=n=>Number(n).toLocaleString('pt-PT',{style:'currency',currency:'USD'});
+$('auth').addEventListener('submit',async e=>{
+  e.preventDefault();$('result').textContent='A consultar…';$('dashboard').hidden=true;
+  const token=$('token').value;
+  try{const r=await fetch('/.netlify/functions/goldbot-status',{headers:{Authorization:'Bearer '+token,Accept:'application/json'},cache:'no-store'});
+    const j=await r.json();if(!r.ok)throw Error(j.error||'HTTP '+r.status);
+    $('result').textContent='Consulta autenticada.';$('dashboard').hidden=false;
+    $('stateTitle').textContent=j.enabled?'Ativo no servidor':j.masterEnabled?'Pausado no painel':'Desativado no Netlify';
+    $('start').hidden=!j.masterEnabled||j.enabled; $('pause').hidden=!j.enabled;
+    $('lastRun').textContent='Última execução: '+(j.state.lastRunAt||'ainda não executou')+' · Agendamento: '+j.schedule;
+    $('cash').textContent=usd(j.state.cash);$('positions').textContent=j.state.positions.length;
+    $('trades').textContent=j.state.trades.length;$('price').textContent=j.state.lastPrice?usd(j.state.lastPrice.value):'—';
+    $('events').replaceChildren();for(const event of (j.state.events||[]).slice(0,16)){
+      const li=document.createElement('li');const b=document.createElement('b'),t=document.createElement('small'),p=document.createElement('p');
+      b.textContent=event.action;t.textContent=' · '+event.at;p.textContent=event.detail;
+      li.append(b,t,p);$('events').append(li);
+    }
+    if(!(j.state.events||[]).length)$('events').textContent='Sem decisões registadas. Executa o primeiro ciclo no Netlify.';
+  }catch(error){$('result').textContent='Falha na consulta: '+error.message;}
+});
+for(const [id,enabled] of [['start',true],['pause',false]])$(''+id).addEventListener('click',async()=>{
+  $('result').textContent='A atualizar…';const token=$('token').value;
+  try{const r=await fetch('/.netlify/functions/goldbot-control',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({enabled})});
+    const j=await r.json();if(!r.ok)throw Error(j.error||'HTTP '+r.status);$('result').textContent=j.message;
+    $('start').hidden=enabled;$('pause').hidden=!enabled;$('stateTitle').textContent=enabled?'Ativo no servidor':'Pausado no painel';
+  }catch(e){$('result').textContent=e.message;}
+});
+</script>
+</body></html>
