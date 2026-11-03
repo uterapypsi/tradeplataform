@@ -52,7 +52,7 @@ export default async (request)=>{
   const key=env('FRED_API_KEY');
   if(key){
     const data=await Promise.allSettled(Object.keys(fred).map(id=>getFred(id,key)));
-    data.forEach((item,i)=>{if(item.status==='fulfilled')items.push(item.value);else errors.push('FRED '+Object.keys(fred)[i]+': '+String(item.reason?.message||item.reason).slice(0,80);});
+    data.forEach((item,i)=>{if(item.status==='fulfilled')items.push(item.value);else errors.push('FRED '+Object.keys(fred)[i]+': '+String(item.reason?.message||item.reason).slice(0,80));});
   }else errors.push('Configura FRED_API_KEY para inflação, taxa Fed, desemprego e rendimento das obrigações.');
   return Response.json({asOf:new Date().toISOString(),items,errors},
     {headers:{'Cache-Control':'public, max-age=120, s-maxage=1800','X-Content-Type-Options':'nosniff'}});
