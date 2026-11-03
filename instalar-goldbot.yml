@@ -1,0 +1,61 @@
+name: Instalar GoldBot AI 2.0 (simulacao)
+
+'on':
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: goldbot-2-install
+  cancel-in-progress: false
+
+jobs:
+  instalar:
+    name: Verificar, instalar e publicar codigo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Obter repositorio
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Confirmar pacote enviado pelo proprietario
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '53a69392a86901a3bfa64fa6da11aa83ec5ff7a2632e9e1b2ecf02816972161c  GoldBot2_Atualizacao.zip' | sha256sum -c -
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Extrair apenas o pacote verificado
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -o -q GoldBot2_Atualizacao.zip
+
+      - name: Verificar codigo e instalar lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm run check
+          npm test
+
+      - name: Guardar a atualizacao no repositorio
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- netlify public tests package.json package-lock.json GOLDBOT_2_0_LEIA_PRIMEIRO.md
+          if git diff --cached --quiet; then
+            echo 'Ja instalado: nenhuma alteracao.'
+          else
+            git commit -m 'feat: instalar GoldBot AI 2.0 em modo simulacao'
+            git push origin HEAD:main
+          fi
