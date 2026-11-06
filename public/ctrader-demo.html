@@ -21,21 +21,58 @@
 <div><dt>Estado</dt><dd id="connected">—</dd></div><div><dt>Conta demo</dt><dd id="login">—</dd></div>
 <div><dt>Saldo</dt><dd id="balance">—</dd></div><div><dt>Alavancagem</dt><dd id="leverage">—</dd></div>
 <div><dt>Permissão</dt><dd id="permission">—</dd></div><div><dt>Consultado em</dt><dd id="timestamp">—</dd></div>
-</dl></section><p class="warning">A autorização para consulta não ativa negociação automática. Os tokens cTrader ficam só no servidor; o token de acesso precisa de renovação quando expirar.</p>
+</dl></section>
+<section id="monitor" class="card" hidden><h2>Monitor automático</h2>
+<p>O servidor verifica a ligação demo aproximadamente a cada seis horas. A consulta agendada não abre operações.</p>
+<p id="monitorResult">Sem dados de monitorização.</p></section>
+<section id="paper" class="card" hidden><h2>GoldBot — simulação separada</h2>
+<p>O saldo do agente é virtual e não se mistura com a conta IC Markets.</p><dl>
+<div><dt>Saldo da simulação (USD)</dt><dd id="paperCash">—</dd></div>
+<div><dt>Operações simuladas</dt><dd id="paperTrades">—</dd></div>
+<div><dt>Último ciclo</dt><dd id="paperLast">—</dd></div>
+<div><dt>Estado</dt><dd id="paperStatus">—</dd></div>
+</dl><a href="/goldbot-v2.html">Abrir monitor principal →</a></section>
+<p class="warning">A autorização para consulta não ativa negociação automática. Os tokens cTrader ficam só no servidor; o token de acesso precisa de renovação quando expirar.</p>
 <script>
 const $=id=>document.getElementById(id);
+const friendlyTime=value=>value?new Date(value).toLocaleString('pt-PT'):'Ainda não realizado';
+const authHeaders=()=>({Authorization:'Bearer '+$('key').value,Accept:'application/json'});
+async function getPrivate(path){
+  const response=await fetch(path,{headers:authHeaders(),cache:'no-store'});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'HTTP '+response.status);
+  return data;
+}
 $('check').addEventListener('submit',async event=>{
-  event.preventDefault();$('details').hidden=true;$('message').textContent='A estabelecer ligação DEMO…';$('run').disabled=true;
+  event.preventDefault();
+  $('details').hidden=true;$('monitor').hidden=true;$('paper').hidden=true;
+  $('message').textContent='A consultar a conta DEMO…';$('run').disabled=true;
   try{
-    const resp=await fetch('/.netlify/functions/ctrader-demo-status',{headers:{Authorization:'Bearer '+$('key').value,Accept:'application/json'},cache:'no-store'});
-    const data=await resp.json();if(!resp.ok)throw Error(data.error||`HTTP ${resp.status}`);
+    const data=await getPrivate('/.netlify/functions/ctrader-demo-status?mode=live');
     $('connected').textContent=data.connected?'Ligado':'Desligado';$('login').textContent=data.login;
     $('balance').textContent=Number.isFinite(data.balance)?new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(data.balance):'Consultar no cTrader';
     $('leverage').textContent=Number.isFinite(data.leverage)?'1:'+data.leverage:'—';
     $('permission').textContent=data.permission==='view'?'Apenas leitura':'—';
-    $('timestamp').textContent=new Date(data.checkedAt).toLocaleString('pt-PT');
+    $('timestamp').textContent=friendlyTime(data.checkedAt);
     $('details').hidden=false;$('message').textContent='Ligação demo confirmada.';
-  }catch(error){$('message').textContent=`Falha de ligação: ${error.message}`;}
+    // Monitoring and paper status are independent: failure in one is not a broker failure.
+    try{
+      const h=await getPrivate('/.netlify/functions/ctrader-demo-status?mode=health');
+      $('monitorResult').textContent=h.connected===true
+        ?'Última verificação: '+friendlyTime(h.lastSuccessAt)+' — ligação OK.'
+        :h.lastError?'Última verificação falhou ('+h.lastError.code+'). Último sucesso: '+friendlyTime(h.lastSuccessAt)
+        :'A monitorização agendada ainda não realizou uma consulta.';
+      $('monitor').hidden=false;
+    }catch{/* The broker connection already succeeded; avoid implying it failed. */}
+    try{
+      const p=await getPrivate('/.netlify/functions/goldbot-status');
+      $('paperCash').textContent=new Intl.NumberFormat('pt-PT',{style:'currency',currency:'USD'}).format(Number(p.state?.cash||0));
+      $('paperTrades').textContent=String(p.state?.trades?.length??0);
+      $('paperLast').textContent=friendlyTime(p.state?.lastRunAt);
+      $('paperStatus').textContent=p.enabled?'Simulação ativa':'Simulação pausada';
+      $('paper').hidden=false;
+    }catch{/* Demo reader stays available even if the paper simulator is offline. */}
+  }catch(error){$('message').textContent='Falha de ligação: '+error.message;}
   finally{$('run').disabled=false;}
 });
 </script>
