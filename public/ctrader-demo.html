@@ -1,39 +1,154 @@
 <!doctype html>
 <html lang="pt-PT">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#160622">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#0b1020"><title>GoldBot — IC Markets Demo</title>
+<meta name="description" content="GoldBot AI — painel privado de consulta cTrader Demo, sem execução de ordens.">
+<title>GOLDBOT / NΞON CORE — IC Markets Demo</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1020;--panel:#151e31;--line:#30435c;--lime:#c7ee86;--text:#eef4ff;--muted:#9aabc3}
-*{box-sizing:border-box}body{background:var(--bg);color:var(--text);font:16px system-ui,-apple-system,sans-serif;max-width:680px;margin:auto;padding:26px 16px}h1{font-size:30px}p{line-height:1.5;color:var(--muted)}a{color:var(--lime)}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;margin:18px 0}.tag{font-size:12px;font-weight:700;color:var(--lime);letter-spacing:.15em}.controls{display:flex;gap:8px;flex-wrap:wrap}.controls input{flex:1;min-width:200px;background:#0b1020;border:1px solid #4d6077;color:white;border-radius:10px;padding:14px;font-size:16px}.controls button{background:var(--lime);color:#152112;border:none;border-radius:10px;padding:14px;font-weight:800;font-size:16px;cursor:pointer}dl{display:grid;grid-template-columns:1fr 1fr;gap:12px}dl div{background:#0b1425;padding:14px;border-radius:12px}dt{font-size:12px;color:var(--muted)}dd{margin:6px 0;font-weight:700;font-size:19px;overflow-wrap:anywhere}#message{white-space:pre-wrap;overflow-wrap:anywhere}.warning{color:#ffcf86;font-size:14px}
+:root{color-scheme:dark;--bg:#0c0416;--bg2:#190727;--surface:#1d0d2e;--panel:#211033;--panel-hi:#2e1545;--violet:#9c3ffa;--hot:#ed3eff;--gold:#f9ed4d;--amber:#ffbb37;--cyan:#5ff8f6;--ink:#f9f3ff;--muted:#bcaace;--line:rgba(229,178,255,.17);--green:#82ffc3;--red:#ff779c;--shadow:0 24px 60px rgba(3,0,10,.35)}
+*{box-sizing:border-box} html{scroll-behavior:smooth} [hidden]{display:none!important}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:-.012em;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 110% 55% at 50% -13%,rgba(142,39,244,.41),transparent 80%),radial-gradient(ellipse 40% 35% at 94% 35%,rgba(189,27,238,.16),transparent 88%),radial-gradient(ellipse 50% 45% at 0% 83%,rgba(99,20,169,.15),transparent 90%);z-index:0}
+body:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(178,78,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(178,78,255,.04) 1px,transparent 1px);background-size:35px 35px;mask-image:linear-gradient(to bottom,#000 15%,transparent 95%)}
+.skip{position:absolute;top:-100px;left:10px;color:#000;background:var(--gold);padding:10px;z-index:20}.skip:focus{top:10px}
+a{color:inherit;text-decoration:none}button,input{font:inherit}button{cursor:pointer}
+.app{isolation:isolate;position:relative;z-index:1;max-width:1200px;margin:auto;padding:18px 22px 80px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 3px 23px;border-bottom:1px solid rgba(189,105,243,.16)}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.symbol{position:relative;width:44px;height:44px;border:1px solid rgba(249,237,77,.52);background:linear-gradient(145deg,rgba(249,237,77,.17),rgba(178,39,252,.12));border-radius:13px;box-shadow:0 0 24px rgba(249,237,77,.12);display:grid;place-items:center;flex:none}
+.symbol:after{content:"";position:absolute;inset:-4px;border:1px solid rgba(249,237,77,.11);border-radius:17px;pointer-events:none}
+.symbol svg{width:26px;height:26px;filter:drop-shadow(0 0 7px rgba(249,237,77,.65))}
+.brand b{font-weight:950;letter-spacing:.16em;font-size:16px;color:var(--gold);white-space:nowrap}.brand small{display:block;margin-top:1px;letter-spacing:.18em;color:#9c8bb1;font-size:9px;font-weight:800;text-transform:uppercase}
+.nav{display:flex;align-items:center;gap:10px;flex:none}.version{font-size:10px;color:var(--cyan);font-weight:850;letter-spacing:.15em;padding:7px 10px;border:1px solid rgba(95,248,246,.17);border-radius:7px;background:rgba(95,248,246,.055)}
+.back{font-size:11px;letter-spacing:.03em;font-weight:800;padding:9px 12px;border:1px solid rgba(245,220,255,.18);border-radius:9px;background:rgba(255,255,255,.025);transition:.2s}.back:hover{border-color:var(--gold);color:var(--gold)}
+.hero{display:grid;grid-template-columns:1.08fr .92fr;gap:10px;align-items:center;min-height:380px;padding:42px 20px 30px 16px;overflow:hidden;position:relative}
+.hero:before{content:"";position:absolute;left:0;top:0;width:230px;height:1px;background:linear-gradient(90deg,var(--gold),transparent)}
+.kicker{font-size:11px;letter-spacing:.3em;font-weight:850;color:var(--cyan);text-shadow:0 0 16px rgba(95,248,246,.36);margin:0 0 20px}.kicker .line{display:inline-block;width:22px;height:2px;background:var(--cyan);vertical-align:middle;margin-right:10px;box-shadow:0 0 10px var(--cyan)}
+h1{margin:0;font-weight:950;line-height:.86;letter-spacing:-.08em;font-size:clamp(76px,10vw,150px);color:var(--gold);text-transform:uppercase;text-shadow:0 0 14px rgba(249,237,77,.15),0 0 60px rgba(249,237,77,.11)}
+h1 .brand-cont{display:inline;color:var(--gold)}h1 .hero-ai{display:block;font-size:clamp(38px,5.5vw,76px);letter-spacing:-.066em;color:white;margin-top:6px;text-shadow:none}h1 .dotmark{display:inline;color:var(--gold)}
+.hero-desc{max-width:515px;color:#c6b7d7;font-size:14px;line-height:1.85;margin:24px 0 19px}.hero-desc strong{color:#faf6ff}
+.badges{display:flex;gap:8px;flex-wrap:wrap}.badge{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid rgba(249,237,77,.24);background:rgba(249,237,77,.055);color:#f5efae;border-radius:7px;font-size:10px;letter-spacing:.1em;font-weight:900;text-transform:uppercase}.badge.cyan{border-color:rgba(95,248,246,.25);background:rgba(95,248,246,.05);color:var(--cyan)}
+.badge .mini{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 9px currentColor}
+.core-wrap{position:relative;display:grid;place-items:center;min-height:290px;min-width:0;pointer-events:none}
+.core-glow{position:absolute;width:min(95%,420px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(172,41,255,.24),rgba(89,21,136,.12) 40%,transparent 72%);filter:blur(16px)}
+.core{width:min(100%,370px);height:auto;overflow:visible;filter:drop-shadow(0 0 24px rgba(171,50,254,.23))}
+.orbit1{transform-origin:50% 50%;animation:orbit 30s linear infinite}.orbit2{transform-origin:50% 50%;animation:orbit 45s linear infinite reverse}
+.pulse{animation:pulse 3.4s ease-in-out infinite;transform-origin:50% 50%}
+@keyframes orbit{to{transform:rotate(360deg)}}@keyframes pulse{50%{opacity:.56;transform:scale(1.055)}}
+.core-label{position:absolute;right:11px;bottom:7px;color:#dcb2ff;font:750 10px ui-monospace,SFMono-Regular,monospace;letter-spacing:.16em;background:rgba(16,4,28,.8);border:1px solid rgba(179,83,255,.19);padding:7px 10px;border-radius:6px}
+.systembar{display:flex;align-items:center;gap:13px;justify-content:space-between;padding:13px 17px;margin:0 0 17px;border:1px solid var(--line);border-left:3px solid var(--gold);background:linear-gradient(90deg,rgba(46,15,69,.8),rgba(29,11,45,.65));border-radius:11px;box-shadow:var(--shadow)}
+.status-left{display:flex;align-items:center;gap:11px;min-width:0}.status-led{width:10px;height:10px;border-radius:50%;background:#cda7dd;box-shadow:0 0 11px rgba(227,172,255,.45);flex:none}.status-led.live{background:var(--green);box-shadow:0 0 12px rgba(130,255,195,.7)}
+.systembar b{display:block;font-size:11px;letter-spacing:.14em;font-weight:900;text-transform:uppercase}.systembar span{display:block;font-size:11px;color:var(--muted)}
+.system-tag{color:var(--gold);white-space:nowrap;font:800 10px ui-monospace,SFMono-Regular,monospace;letter-spacing:.09em}
+.grid{display:grid;grid-template-columns:1.25fr .9fr;gap:16px}.panel{position:relative;min-width:0;overflow:hidden;background:linear-gradient(160deg,rgba(40,16,62,.86),rgba(21,8,36,.92));border:1px solid rgba(212,142,255,.18);border-radius:17px;box-shadow:var(--shadow);padding:23px}.panel:after{content:"";position:absolute;top:0;right:0;width:75px;height:75px;border-top:1px solid rgba(249,237,77,.28);border-right:1px solid rgba(249,237,77,.28);pointer-events:none;clip-path:polygon(40% 0,100% 0,100% 100%,98% 100%,98% 2%,40% 2%)}.panel:before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,rgba(249,237,77,.83),rgba(237,62,255,.42),transparent 77%)}
+.auth{grid-column:span 2;display:grid;grid-template-columns:.72fr 1.28fr;gap:24px;align-items:center;padding:28px 30px}
+.index{display:inline-block;font:800 10px ui-monospace,SFMono-Regular,monospace;letter-spacing:.2em;color:var(--cyan);margin-bottom:11px}
+h2{font-size:clamp(22px,2.8vw,28px);font-weight:900;letter-spacing:-.04em;margin:0 0 10px}.panel p{font-size:13px;color:#bdaed0;line-height:1.7;margin:0}.muted{color:var(--muted)}
+.field-label{display:block;font-size:10px;letter-spacing:.16em;font-weight:850;color:#f3df81;margin-bottom:9px;text-transform:uppercase}
+.controls{display:flex;gap:9px}.controls input{min-width:0;flex:1;border:1px solid rgba(204,137,246,.3);outline:0;border-radius:10px;background:#11071d;color:#fff;min-height:54px;font-size:15px;padding:12px 14px;transition:.2s}.controls input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(249,237,77,.09)}.controls input::placeholder{color:#9682aa}
+.controls button{border:0;background:linear-gradient(115deg,var(--gold),#ffbd35);color:#17100a;font-weight:950;font-size:13px;letter-spacing:.02em;border-radius:10px;min-height:54px;padding:12px 19px;box-shadow:0 6px 30px rgba(249,237,77,.17),inset 0 -2px 0 rgba(44,30,0,.12);transition:transform .18s,filter .18s}.controls button:hover{transform:translateY(-1px);filter:brightness(1.08)}.controls button:disabled{opacity:.5;cursor:wait;transform:none}
+.message{padding:10px 0 0;min-height:26px;color:#9e8cb3;font-size:12px}.message.good{color:var(--green)}.message.bad{color:var(--red)}
+.heading{display:flex;align-items:start;justify-content:space-between;gap:7px;margin-bottom:17px}.heading h2{margin-bottom:0}.heading small{font:800 10px ui-monospace,SFMono-Regular,monospace;letter-spacing:.1em;color:#d5adff;white-space:nowrap}
+.details{grid-column:span 2}.account-strip{display:flex;align-items:center;gap:13px;border-radius:12px;background:rgba(141,56,209,.12);border:1px solid rgba(155,78,233,.21);padding:12px;margin-bottom:15px}.icmark{width:42px;height:42px;flex:none;display:grid;place-items:center;border-radius:10px;background:linear-gradient(145deg,rgba(95,248,246,.14),rgba(151,76,248,.24));border:1px solid rgba(95,248,246,.25);color:var(--cyan);font-weight:950}.account-strip b{display:block;font-size:13px}.account-strip small{color:var(--muted);font-size:11px}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0}.metrics>div{min-width:0;min-height:100px;padding:17px;border-radius:12px;background:linear-gradient(145deg,rgba(14,6,26,.84),rgba(35,14,52,.7));border:1px solid rgba(199,108,255,.13)}dt{text-transform:uppercase;font-size:10px;letter-spacing:.12em;color:#b69acb;font-weight:800}dd{font-size:clamp(18px,2.4vw,26px);line-height:1.28;font-weight:900;letter-spacing:-.035em;overflow-wrap:anywhere;margin:9px 0 0}.metrics .feature{background:linear-gradient(140deg,rgba(249,237,77,.1),rgba(82,30,104,.28));border:1px solid rgba(249,237,77,.26)}.metrics .feature dd{font-size:clamp(26px,3vw,34px);color:var(--gold);text-shadow:0 0 15px rgba(249,237,77,.16)}.metrics .ok dd{color:var(--green)}.metrics .small dd{font-size:17px}
+.monitor,.paper{min-height:100%}.information{display:flex;gap:11px;align-items:start;margin-bottom:15px}.information i{font-style:normal;color:var(--cyan);font-size:23px;line-height:1}.monitor-stat{border:1px solid rgba(95,248,246,.15);border-radius:10px;background:rgba(9,3,20,.54);padding:15px;color:#d4c3e8;font-size:13px;line-height:1.65;overflow-wrap:anywhere}
+.paper dl{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin:16px 0}.paper dl div{min-width:0;background:rgba(8,4,19,.5);border:1px solid rgba(209,135,253,.12);padding:13px;border-radius:10px}.paper dl dd{font-size:17px;margin-top:6px}.text-link{display:inline-block;font-size:12px;font-weight:900;color:var(--gold);padding-bottom:3px;border-bottom:1px solid rgba(249,237,77,.4)}
+.footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid var(--line);margin-top:24px;padding:22px 0;color:#917da7;font-size:11px;line-height:1.6}.footer strong{color:var(--gold);letter-spacing:.14em}
+@media(max-width:900px){.hero{min-height:310px}h1{font-size:clamp(61px,10vw,105px)}}
+@media(max-width:700px){.app{padding:14px 14px 65px}.version{display:none}.hero{padding:34px 4px 20px;grid-template-columns:1fr;gap:0;min-height:0}.hero .visual{order:-1;max-width:255px;width:100%;justify-self:center;min-height:215px;margin-bottom:-16px;opacity:.93}.core{width:255px}.core-label{right:0;bottom:10px}.hero-copy{z-index:2}.kicker{font-size:9px;letter-spacing:.24em;margin-bottom:16px}.hero h1{font-size:clamp(54px,13vw,88px)}h1 .hero-ai{font-size:clamp(37px,9vw,60px)}.hero-desc{font-size:13px;margin:17px 0}.systembar{padding:12px 13px}.systembar .system-tag{display:none}.grid{grid-template-columns:1fr}.auth,.details{grid-column:auto}.auth{grid-template-columns:1fr;gap:20px;padding:21px}.panel{padding:18px}.metrics{grid-template-columns:repeat(2,1fr)}.metrics .feature{grid-column:span 2}.metrics .feature dd{font-size:30px}.top{padding-bottom:15px}.back{padding:9px 10px}.brand b{font-size:14px}.brand small{font-size:8px}}
+@media(max-width:440px){.hero{padding-top:20px}.hero .visual{max-width:195px;min-height:166px;margin-bottom:-8px}.core{width:205px}.core-label{display:none}.controls{flex-direction:column}.controls input,.controls button{width:100%}.panel{padding:17px}.metrics>div{padding:14px;min-height:94px}.metrics dd{font-size:18px}.metrics .small dd{font-size:15px}.footer{flex-direction:column}.badges{gap:5px}.badge{font-size:9px;padding:7px 9px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
-<a href="/goldbot-v2.html">← Voltar ao GoldBot</a><p class="tag">CTRADER OPEN API • DEMO • SÓ LEITURA</p>
-<h1>IC Markets — Conta Demo</h1>
-<p>Consulta privada da conta 10134087. Nenhuma compra ou venda será executada. O saldo do simulador GoldBot é independente desta conta.</p>
-<section class="card"><h2>Validar ligação</h2>
-<p>Utiliza a mesma chave privada <code>GOLDBOT_V2_ADMIN_TOKEN</code> que já usas no monitor GoldBot. Não introduzas aqui os tokens cTrader.</p>
-<form id="check" class="controls"><input id="key" type="password" autocomplete="off" minlength="24" required placeholder="Chave privada do GoldBot"><button id="run">Consultar demo</button></form>
-<p id="message" role="status">Ainda não foi efetuado um teste.</p></section>
-<section id="details" class="card" hidden><h2>Dados da cTrader</h2><dl>
-<div><dt>Estado</dt><dd id="connected">—</dd></div><div><dt>Conta demo</dt><dd id="login">—</dd></div>
-<div><dt>Saldo</dt><dd id="balance">—</dd></div><div><dt>Alavancagem</dt><dd id="leverage">—</dd></div>
-<div><dt>Permissão</dt><dd id="permission">—</dd></div><div><dt>Consultado em</dt><dd id="timestamp">—</dd></div>
-</dl></section>
-<section id="monitor" class="card" hidden><h2>Monitor automático</h2>
-<p>O servidor verifica a ligação demo aproximadamente a cada seis horas. A consulta agendada não abre operações.</p>
-<p id="monitorResult">Sem dados de monitorização.</p></section>
-<section id="paper" class="card" hidden><h2>GoldBot — simulação separada</h2>
-<p>O saldo do agente é virtual e não se mistura com a conta IC Markets.</p><dl>
-<div><dt>Saldo da simulação (USD)</dt><dd id="paperCash">—</dd></div>
-<div><dt>Operações simuladas</dt><dd id="paperTrades">—</dd></div>
-<div><dt>Último ciclo</dt><dd id="paperLast">—</dd></div>
-<div><dt>Estado</dt><dd id="paperStatus">—</dd></div>
-</dl><a href="/goldbot-v2.html">Abrir monitor principal →</a></section>
-<p class="warning">A autorização para consulta não ativa negociação automática. Os tokens cTrader ficam só no servidor; o token de acesso precisa de renovação quando expirar.</p>
+<a class="skip" href="#check">Ir para acesso seguro</a>
+<div class="app">
+<header class="top" aria-label="Barra superior">
+  <div class="brand">
+    <span class="symbol" aria-hidden="true"><svg viewBox="0 0 36 36" fill="none"><path d="M18 2L5 19h10l-4 15 20-23H19l4-9Z" stroke="#F9ED4D" stroke-width="2.4" stroke-linejoin="round" fill="rgba(249,237,77,.12)"/></svg></span>
+    <span><b>GOLDBOT AI</b><small>NΞON CORE · DEMO TERMINAL</small></span>
+  </div>
+  <div class="nav"><span class="version">INTERFACE 2.2</span><a class="back" href="/goldbot-v2.html">↖ Monitor principal</a></div>
+</header>
+<section class="hero" aria-labelledby="page-title">
+  <div class="hero-copy">
+    <p class="kicker"><span class="line"></span> INTELLIGENCE / TRADING TERMINAL</p>
+    <h1 id="page-title">GOLD<span class="brand-cont">BOT</span><span class="hero-ai">AI<span class="dotmark">.</span></span></h1>
+    <p class="hero-desc"><strong>NEON CORE 2.2</strong> — centro de comando futurista para acompanhar a conta IC Markets Demo e o simulador independente do GoldBot.</p>
+    <div class="badges"><span class="badge cyan"><span class="mini"></span> cTrader Open API</span><span class="badge"><span class="mini"></span> Demo · apenas leitura</span></div>
+  </div>
+  <div class="core-wrap visual" aria-hidden="true">
+    <div class="core-glow"></div>
+    <svg class="core" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" fill="none">
+      <circle cx="200" cy="200" r="175" stroke="#7b25bb" stroke-opacity=".23" stroke-width="1"/>
+      <circle cx="200" cy="200" r="147" stroke="#d76aff" stroke-opacity=".18" stroke-dasharray="3 13"/>
+      <g class="orbit1" stroke="#8d38da" stroke-width="2" stroke-linecap="round" stroke-opacity=".75">
+        <circle cx="200" cy="200" r="158" stroke-dasharray="110 20 20 85 55 690"/>
+        <circle cx="200" cy="200" r="132" stroke-dasharray="12 23 90 40 9 650" stroke="#f9ed4d" stroke-opacity=".8"/>
+      </g>
+      <g class="orbit2" stroke="#5ff8f6" stroke-width="1.1" stroke-opacity=".48">
+        <circle cx="200" cy="200" r="103" stroke-dasharray="4 16 3 14 85 70 7 600"/>
+      </g>
+      <circle cx="200" cy="200" r="90" fill="#4a166d" fill-opacity=".27" stroke="#b159eb" stroke-opacity=".4"/>
+      <circle class="pulse" cx="200" cy="200" r="64" fill="#f9ed4d" fill-opacity=".045" stroke="#f9ed4d" stroke-opacity=".21"/>
+      <path d="M196 120L135 203h53l-16 73 99-109h-67l20-47h-28Z" fill="#f9ed4d" fill-opacity=".09" stroke="#f9ed4d" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M174 189h34l-16 35 30-28" stroke="#5ff8f6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <g stroke="#ff5bf3" opacity=".7"><path d="M63 165H37m0 0 10-10m-10 10 10 10"/><path d="M337 236h26m0 0-10-10m10 10-10 10"/></g>
+      <g fill="#f9ed4d"><circle cx="200" cy="42" r="3"/><circle cx="348" cy="254" r="3"/></g>
+      <g fill="#5ff8f6"><circle cx="80" cy="113" r="2"/><circle cx="127" cy="339" r="2.5"/></g>
+      <path d="M40 90h35M325 310h35" stroke="#5ff8f6" stroke-opacity=".25"/>
+    </svg>
+    <div class="core-label">SYSTEM / VISUAL CORE · NÃO REPRESENTA PREÇOS</div>
+  </div>
+</section>
+<div class="systembar" role="status" aria-live="polite">
+  <div class="status-left"><span class="status-led" id="statusLed"></span><div><b id="statusTitle">Terminal protegido</b><span id="statusSubtitle">Inicia uma consulta autenticada para carregar os dados da conta.</span></div></div>
+  <span class="system-tag">SECURE CHANNEL / cTRADER DEMO</span>
+</div>
+<main class="grid">
+  <section class="panel auth" aria-labelledby="auth-title">
+    <div><span class="index">01 // AUTH PROTOCOL</span><h2 id="auth-title">Acesso seguro</h2><p>Entra com a chave privada do painel GoldBot. Os tokens da cTrader permanecem no servidor — nunca os coloques aqui.</p></div>
+    <div>
+      <form id="check"><label class="field-label" for="key">Chave de acesso do GoldBot</label><div class="controls"><input id="key" type="password" autocomplete="off" minlength="24" required placeholder="Introduzir chave privada"><button id="run" type="submit">Consultar conta ↗</button></div></form>
+      <div id="message" class="message" role="status" aria-live="polite">À espera de autenticação.</div>
+    </div>
+  </section>
+  <section class="panel details" id="details" hidden aria-labelledby="details-title">
+    <div class="heading"><div><span class="index">02 // ACCOUNT INTELLIGENCE</span><h2 id="details-title">Painel da conta</h2></div><small>CTRADER / DEMO</small></div>
+    <div class="account-strip"><div class="icmark" aria-hidden="true">IC</div><div><b>IC Markets EU Ltd</b><small>Ambiente de demonstração · leitura de dados</small></div></div>
+    <dl class="metrics">
+      <div class="feature"><dt>Saldo virtual</dt><dd id="balance">—</dd></div>
+      <div><dt>Estado da ligação</dt><dd id="connected">—</dd></div>
+      <div><dt>Conta Demo</dt><dd id="login">—</dd></div>
+      <div><dt>Alavancagem</dt><dd id="leverage">—</dd></div>
+      <div class="ok small"><dt>Permissão</dt><dd id="permission">—</dd></div>
+      <div class="small"><dt>Última consulta</dt><dd id="timestamp">—</dd></div>
+    </dl>
+  </section>
+  <section class="panel monitor" id="monitor" hidden aria-labelledby="monitor-title">
+    <div class="heading"><div><span class="index">03 // SYSTEM HEALTH</span><h2 id="monitor-title">Monitor automático</h2></div><small>6H / SCHEDULE</small></div>
+    <div class="information"><i aria-hidden="true">⌁</i><p>O servidor verifica a ligação demo aproximadamente a cada seis horas. Não abre operações.</p></div>
+    <div class="monitor-stat" id="monitorResult">Sem dados de monitorização.</div>
+  </section>
+  <section class="panel paper" id="paper" hidden aria-labelledby="paper-title">
+    <div class="heading"><div><span class="index">04 // SIMULATION ENGINE</span><h2 id="paper-title">GoldBot Simulator</h2></div><small>PAPER ONLY</small></div>
+    <p>A simulação funciona separadamente da IC Markets: os saldos não se misturam.</p>
+    <dl>
+      <div><dt>Saldo simulado (USD)</dt><dd id="paperCash">—</dd></div>
+      <div><dt>Operações virtuais</dt><dd id="paperTrades">—</dd></div>
+      <div><dt>Último ciclo</dt><dd id="paperLast">—</dd></div>
+      <div><dt>Estado</dt><dd id="paperStatus">—</dd></div>
+    </dl>
+    <a class="text-link" href="/goldbot-v2.html">Abrir monitor principal ↗</a>
+  </section>
+</main>
+<footer class="footer"><span><strong>GOLDBOT AI / NEON CORE 2.2</strong><br>Interface visual · Integração cTrader Demo de consulta · sem ordens de negociação.</span><span>Dados privados obtidos apenas após autenticação.<br>A apresentação visual não representa previsões de mercado.</span></footer>
+</div>
 <script>
+'use strict';
 const $=id=>document.getElementById(id);
 const friendlyTime=value=>value?new Date(value).toLocaleString('pt-PT'):'Ainda não realizado';
 const authHeaders=()=>({Authorization:'Bearer '+$('key').value,Accept:'application/json'});
@@ -46,7 +161,8 @@ async function getPrivate(path){
 $('check').addEventListener('submit',async event=>{
   event.preventDefault();
   $('details').hidden=true;$('monitor').hidden=true;$('paper').hidden=true;
-  $('message').textContent='A consultar a conta DEMO…';$('run').disabled=true;
+  $('message').textContent='A consultar a conta DEMO…';$('message').className='message';$('run').disabled=true;
+  $('statusTitle').textContent='Consulta em curso';$('statusSubtitle').textContent='A validar a ligação à conta demo…';$('statusLed').classList.remove('live');
   try{
     const data=await getPrivate('/.netlify/functions/ctrader-demo-status?mode=live');
     $('connected').textContent=data.connected?'Ligado':'Desligado';$('login').textContent=data.login;
@@ -54,8 +170,8 @@ $('check').addEventListener('submit',async event=>{
     $('leverage').textContent=Number.isFinite(data.leverage)?'1:'+data.leverage:'—';
     $('permission').textContent=data.permission==='view'?'Apenas leitura':'—';
     $('timestamp').textContent=friendlyTime(data.checkedAt);
-    $('details').hidden=false;$('message').textContent='Ligação demo confirmada.';
-    // Monitoring and paper status are independent: failure in one is not a broker failure.
+    $('details').hidden=false;$('message').textContent='Ligação demo confirmada.';$('message').className='message good';
+    $('statusTitle').textContent='Ligação demo confirmada';$('statusSubtitle').textContent='Dados consultados em '+friendlyTime(data.checkedAt)+' · Apenas leitura.';$('statusLed').classList.add('live');
     try{
       const h=await getPrivate('/.netlify/functions/ctrader-demo-status?mode=health');
       $('monitorResult').textContent=h.connected===true
@@ -63,7 +179,7 @@ $('check').addEventListener('submit',async event=>{
         :h.lastError?'Última verificação falhou ('+h.lastError.code+'). Último sucesso: '+friendlyTime(h.lastSuccessAt)
         :'A monitorização agendada ainda não realizou uma consulta.';
       $('monitor').hidden=false;
-    }catch{/* The broker connection already succeeded; avoid implying it failed. */}
+    }catch{/* As falhas do monitor não apagam a consulta à corretora. */}
     try{
       const p=await getPrivate('/.netlify/functions/goldbot-status');
       $('paperCash').textContent=new Intl.NumberFormat('pt-PT',{style:'currency',currency:'USD'}).format(Number(p.state?.cash||0));
@@ -71,9 +187,12 @@ $('check').addEventListener('submit',async event=>{
       $('paperLast').textContent=friendlyTime(p.state?.lastRunAt);
       $('paperStatus').textContent=p.enabled?'Simulação ativa':'Simulação pausada';
       $('paper').hidden=false;
-    }catch{/* Demo reader stays available even if the paper simulator is offline. */}
-  }catch(error){$('message').textContent='Falha de ligação: '+error.message;}
-  finally{$('run').disabled=false;}
+    }catch{/* A simulação é independente da ligação demo. */}
+  }catch(error){
+    $('message').textContent='Falha de ligação: '+error.message;$('message').className='message bad';
+    $('statusTitle').textContent='Consulta não concluída';$('statusSubtitle').textContent='Verifica a chave e a ligação no servidor.';$('statusLed').classList.remove('live');
+  }finally{$('run').disabled=false;}
 });
 </script>
-</body></html>
+</body>
+</html>
