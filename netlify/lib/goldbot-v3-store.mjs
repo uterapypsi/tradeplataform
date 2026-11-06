@@ -44,7 +44,8 @@ export const isAdmin=req=>{
   const a=String(req.headers.get('Authorization')||'');
   const t=a.startsWith('Bearer ')?a.slice(7):'';
   const secret=adminToken();return secret.length>=32&&equal(t,secret);
-export const requireAdmin=req=>requireV3(isAdmin(req),'UNAUTHORIZED','Administração não autorizada.',401);
+};
+  export const requireAdmin=req=>requireV3(isAdmin(req),'UNAUTHORIZED','Administração não autorizada.',401);
 export const requireTenant=async(req,s=store())=>{
   const auth=String(req.headers.get('Authorization')||'');
   const key=auth.startsWith('Bearer ')?auth.slice(7):'';
