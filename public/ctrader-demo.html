@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0b0e">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="GoldBot AI — centro de controlo privado para cTrader Demo e simulação virtual.">
+<title>GoldBot AI | Command Center</title>
+<style>
+/* GOLDBOT AI — AUREUM Design System | Single-file, no external assets */
+:root{
+  color-scheme:dark;
+  --base:#0a0b0e; --surface:#131418; --raised:#191a1f; --deep:#101115;
+  --border:#2a2b31; --border-soft:#232429; --txt:#f4f0e7; --sub:#c0bdba; --muted:#91949d;
+  --gold:#e7bb69; --gold-soft:#fff0c6; --violet:#ad94e0; --blue:#8caee9; --red:#d69aa4; --green:#92c4a8;
+  --radius:19px; --shadow:0 18px 40px rgba(0,0,0,.17);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100vh;background:var(--base);color:var(--txt);font:15px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:"";height:360px;pointer-events:none;position:absolute;inset:0 0 auto;background:radial-gradient(ellipse at 72% 0%,rgba(161,112,65,.115),transparent 62%)}
+a{color:inherit;text-decoration:none}button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:wait;opacity:.65}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.layout{position:relative;z-index:1;max-width:1450px;min-height:100vh;margin:auto;display:grid;grid-template-columns:246px minmax(0,1fr)}
+.sidebar{padding:28px 17px;position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;gap:30px;border-right:1px solid var(--border-soft);background:rgba(15,16,20,.72)}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}.emblem{width:43px;height:43px;border-radius:14px;flex:none;background:linear-gradient(145deg,#353023,#1a1916);border:1px solid #54432a;display:grid;place-items:center;color:var(--gold)}
+.emblem svg{width:25px;height:25px}.brand strong{display:block;font-size:17px;letter-spacing:.09em;font-weight:830}.brand strong span{color:var(--gold)}.brand small{display:block;font-size:10px;letter-spacing:.18em;color:var(--muted);margin-top:1px;text-transform:uppercase}
+.side-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#777a84;margin:0 13px 11px}
+.nav{display:grid;gap:5px}.nav a{display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:12px;color:#acadb4;font-size:13px;font-weight:600}.nav a svg{width:17px;height:17px;flex:none}.nav a:hover,.nav a.current{background:#232118;color:#eed19c}.nav a.current{border:1px solid #413624}
+.side-bottom{margin-top:auto;display:grid;gap:13px}.safety-tile{border:1px solid #332d25;background:#1a1916;border-radius:16px;padding:16px}.safety-tile .tag{color:var(--gold);font-size:10px;font-weight:800;letter-spacing:.17em;text-transform:uppercase}.safety-tile p{font-size:12px;color:#b4afa5;line-height:1.7;margin:9px 0 0}.side-link{font-size:12px;color:#a8aaaf;padding:0 5px}
+.main{min-width:0;padding:0 37px 38px}.topbar{height:83px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border-soft)}
+.crumb{font-size:12px;letter-spacing:.035em;color:#8f919a}.crumb strong{color:#dad6ca;font-weight:650}.topright{display:flex;align-items:center;gap:9px}.mini-pill{padding:8px 12px;border:1px solid #3c352a;border-radius:999px;background:#1c1a16;color:#dbc18e;font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;white-space:nowrap}
+.version{color:#8c8d94;font-size:11px}.mobile-brand{display:none}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 240px;align-items:stretch;gap:20px;margin:34px 0 24px}
+.hero-copy{padding-top:8px}.overline{margin:0 0 11px;color:var(--gold);text-transform:uppercase;letter-spacing:.22em;font-size:10px;font-weight:850}
+.hero h1{font-size:clamp(34px,4vw,54px);letter-spacing:-.058em;font-weight:760;line-height:1.12;margin:0}.hero h1 em{font-style:normal;font-family:Georgia,"Times New Roman",serif;font-weight:500;color:var(--gold);letter-spacing:-.04em}
+.hero .lead{margin:14px 0 0;max-width:630px;color:#aeacb2;line-height:1.75;font-size:13.5px}
+.hero-tile{display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(150deg,#252119,#151518);border:1px solid #413729;border-radius:19px;padding:18px;min-height:164px;position:relative;overflow:hidden}
+.hero-tile::after{content:"";position:absolute;width:138px;height:138px;border:1px solid rgba(231,187,105,.1);border-radius:50%;right:-44px;top:-56px;box-shadow:0 0 0 24px rgba(231,187,105,.025),0 0 0 48px rgba(231,187,105,.015)}
+.hero-tile .t-top{display:flex;gap:8px;align-items:center;font-size:10px;letter-spacing:.17em;text-transform:uppercase;color:#c2b6a3;font-weight:800;position:relative;z-index:1}.status-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex:none}.hero-tile strong{display:block;font-size:24px;letter-spacing:-.05em;font-weight:700;position:relative;z-index:1}.hero-tile small{color:#a9a297;font-size:11px;position:relative;z-index:1}
+.section-title{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:27px 0 12px}.section-title h2{font-size:17px;letter-spacing:-.02em;margin:0;font-weight:710}.section-title p{margin:3px 0 0;color:var(--muted);font-size:12px}.section-title .section-action{color:#c8b385;font-size:12px}
+.card{border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow)}
+.access{display:grid;grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr);gap:23px;padding:24px;border-color:#433654;background:linear-gradient(140deg,#1c1921,#15151b 58%,#151519)}
+.access-head{display:flex;gap:14px;align-items:flex-start}.icon-square{width:43px;height:43px;border-radius:12px;display:grid;place-items:center;background:#2a2236;border:1px solid #544368;color:#d2b8e4;flex:none}.icon-square svg{width:20px;height:20px}
+.access h2{font-size:17px;line-height:1.25;letter-spacing:-.02em;margin:0 0 7px}.access p{margin:0;color:#aaa4b4;font-size:12px;line-height:1.75}.form{min-width:0}.input-label{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#d4bdec;font-weight:830;margin-bottom:9px}
+.form-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center}
+.input-wrap{position:relative;min-width:0;display:flex;align-items:center;border:1px solid #524260;border-radius:12px;background:#111015;max-height:52px}
+.input-wrap:focus-within{border-color:#b294d3}.input-wrap input{display:block;appearance:none;-webkit-appearance:none;min-width:0;width:100%;height:50px;min-height:50px;max-height:50px;flex:1 1 auto;padding:0 42px 0 14px;margin:0;border:0!important;box-shadow:none!important;outline:0;background:transparent;color:#f0e9e7;font-size:16px;line-height:50px;letter-spacing:.08em}
+.input-wrap input::placeholder{letter-spacing:0;color:#77727e}.reveal{position:absolute;right:7px;top:7px;width:36px;height:36px;background:transparent;color:#9c91a3;border:0;border-radius:9px;display:grid;place-items:center}.reveal svg{width:17px;height:17px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:12px;border:1px solid transparent;padding:0 20px;font-size:12px;font-weight:800;letter-spacing:.035em;white-space:nowrap}
+.btn.gold{background:linear-gradient(125deg,#f4d48a,#d8a854);color:#21180c}.btn.gold:hover{background:#f3d48e}.btn.ghost{border-color:#49433a;background:#201e1a;color:#e5d4b0}.btn.quiet{background:#1a1b20;border-color:#35363c;color:#cfccd1}
+.form-help{font-size:11px;color:#918999;margin:10px 0 0}.notice{font-size:12px;line-height:1.55;border-radius:12px;padding:11px 13px;margin-top:12px;border:1px solid #35323d;color:#bcb6c1;background:#201e25;overflow-wrap:anywhere}.notice.ok{background:#15241d;border-color:#355441;color:#ade0bd}.notice.error{background:#29171b;border-color:#693740;color:#f3b7bf}
+.overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}.metric{min-width:0;min-height:144px;padding:17px 17px 15px;border-radius:17px;position:relative;overflow:hidden}
+.metric::before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:2px;background:var(--tone)}.metric .meta{display:flex;justify-content:space-between;gap:8px;align-items:center}.metric .meta span{color:#9999a0;font-size:11px;font-weight:640}.metric .meta svg{width:17px;height:17px;color:var(--tone)}
+.metric .value{font-size:clamp(18px,2.1vw,27px);font-weight:690;line-height:1.2;letter-spacing:-.04em;margin-top:25px;overflow-wrap:anywhere}.metric small{font-size:10px;color:#888a93;display:block;margin-top:6px}
+.tone-gold{--tone:var(--gold)}.tone-blue{--tone:var(--blue)}.tone-red{--tone:var(--red)}.tone-violet{--tone:var(--violet)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{padding:22px;min-width:0}.panel.blue{border-top:2px solid #5e7fb3}.panel.red{border-top:2px solid #aa6871}.panel.gold-panel{border-top:2px solid #b58a4c}.panel .cap{font-size:10px;letter-spacing:.17em;text-transform:uppercase;font-weight:800;margin:0 0 7px;color:#93959f}.panel.blue .cap{color:#a4bce5}.panel.red .cap{color:#e0a9ad}.panel.gold-panel .cap{color:#e1bb79}.panel h3{font-size:20px;letter-spacing:-.03em;line-height:1.25;margin:0}.panel .desc{font-size:12px;color:#9fa0a9;margin:10px 0 18px;line-height:1.7}
+.data-rows{display:grid;gap:0}.data-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:13px 0;border-top:1px solid #292a31}.data-row span{font-size:12px;color:#9fa1ab}.data-row strong{font-size:12px;font-weight:690;text-align:right;overflow-wrap:anywhere;min-width:0}.data-row .success{color:#a5d8b3}.data-row .attention{color:#edb2b9}
+.monitor-banner{display:flex;gap:12px;align-items:flex-start;padding:13px;border-radius:12px;background:#231c20;border:1px solid #442b31;margin-bottom:12px}.monitor-banner .indicator{width:8px;height:8px;margin-top:5px;background:#d1a6ac;border-radius:50%;flex:none}.monitor-banner.ok{background:#1b2620;border-color:#345241}.monitor-banner.ok .indicator{background:#9acaab}.monitor-banner div{font-size:12px;color:#e1d5d7;line-height:1.5}
+.panel-foot{margin-top:12px;font-size:11px;line-height:1.6;color:#8f909b}
+.paperbox{margin-top:14px;padding:22px;border-top:2px solid #b58a4c}.paper-head{display:flex;align-items:center;justify-content:space-between;gap:14px}.pill{display:inline-flex;align-items:center;gap:8px;border:1px solid #5c4a32;border-radius:999px;padding:6px 10px;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#e8cc9a;background:#251e17;font-weight:810}.pill .dot{width:7px;height:7px;border-radius:50%;background:#dfb16b}
+.paper-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}.paper-stat{padding:15px;border-radius:13px;border:1px solid #33312b;background:#171717;min-width:0}.paper-stat span{display:block;font-size:11px;color:#aba59a}.paper-stat strong{display:block;font-size:21px;line-height:1.2;letter-spacing:-.035em;margin:9px 0 0;overflow-wrap:anywhere}
+.paper-tools{display:flex;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}.paper-tools .helper{font-size:11px;color:#99989d}.events{margin-top:14px;padding:22px}.event-list{display:grid;gap:0;list-style:none;padding:0;margin:15px 0 0}.event{display:grid;grid-template-columns:8px minmax(0,1fr);gap:13px;padding:14px 0;border-top:1px solid #2b2c31}.event-mark{width:8px;height:8px;border-radius:50%;background:#79684a;margin-top:7px}.event strong{display:inline-block;font-size:12px;font-weight:800;margin-right:8px}.event time{font-size:11px;color:#8f919b}.event p{font-size:12px;color:#a7a7ac;margin:5px 0 0;line-height:1.6;overflow-wrap:anywhere}
+.empty{font-size:12px;color:#aaa5a0;padding:16px;border:1px dashed #37363a;border-radius:12px}
+.footer{margin:35px 0 0;padding-top:20px;display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-top:1px solid #24252b;font-size:11px;color:#8e8d94;line-height:1.7}.footer strong{color:#c9b68b;font-weight:770}
+@media(max-width:1220px){.main{padding:0 25px 30px}.overview{grid-template-columns:repeat(2,minmax(0,1fr))}.paper-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{display:none}.mobile-brand{display:flex}.main{padding:0 20px 30px}.topbar{height:72px}.crumb{display:none}.hero{margin:27px 0 20px}.version{display:none}}
+@media(max-width:650px){.main{padding:0 14px 26px}.topbar{height:69px}.hero{grid-template-columns:1fr;gap:13px;margin:25px 0 19px}.hero-copy{padding:0 3px}.hero h1{font-size:36px}.hero .lead{font-size:12px;margin-top:10px}.hero-tile{min-height:99px;padding:14px;gap:14px}.hero-tile strong{font-size:19px}.hero-tile small{display:none}.access{grid-template-columns:1fr;gap:17px;padding:17px}.access .access-head{gap:11px}.form-row{grid-template-columns:1fr}.form-row .btn{width:100%}.metric{min-height:124px;padding:14px}.metric .value{font-size:20px;margin-top:18px}.split{grid-template-columns:1fr}.panel,.paperbox,.events{padding:18px}.paper-head{align-items:flex-start;flex-direction:column;gap:10px}.paper-stat strong{font-size:19px}.footer{flex-direction:column;gap:8px;margin-top:24px}}
+@media(max-width:370px){.main{padding-left:10px;padding-right:10px}.hero h1{font-size:31px}.mobile-brand .brand strong{font-size:14px}.mini-pill{font-size:9px;padding:7px 9px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <a href="#inicio" class="brand" aria-label="GoldBot AI, início">
+      <span class="emblem"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M3.5 15.5 9 5l3.8 6.6-3.2 1.9 4.2 5.5L20.5 8" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span><strong>GOLD<span>BOT</span></strong><small>Private command</small></span>
+    </a>
+    <div><p class="side-label">Workspace</p><nav class="nav" aria-label="Navegação principal">
+      <a href="#inicio" class="current"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Visão geral</a>
+      <a href="#corretora"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="6" width="20" height="14" rx="3"/><path d="M2 11h20"/></svg>Conta demo</a>
+      <a href="#monitor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12h4l3-6 5 12 3-6h5"/></svg>Monitor automático</a>
+      <a href="#simulacao"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Simulação</a>
+      <a href="#decisoes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 7h13M8 12h13M8 17h13M3 7h1M3 12h1M3 17h1"/></svg>Últimas decisões</a>
+    </nav></div>
+    <div class="side-bottom"><div class="safety-tile"><span class="tag">• Ambiente protegido</span><p>Conta cTrader em modo de consulta. O GoldBot utiliza apenas dinheiro virtual.</p></div><a class="side-link" href="/goldbot-v2.html">Abrir monitor original ↗</a></div>
+  </aside>
+  <main class="main" id="inicio">
+    <header class="topbar">
+      <div class="mobile-brand brand"><span class="emblem"><svg viewBox="0 0 24 24" fill="none"><path d="M3.5 15.5 9 5l3.8 6.6-3.2 1.9 4.2 5.5L20.5 8" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong>GOLD<span>BOT</span></strong><small>Command center</small></span></div>
+      <div class="crumb"><span class="desktop-crumb">Workspace / </span><strong>Visão geral</strong></div>
+      <div class="topright"><span class="mini-pill">● Demo · apenas leitura</span><span class="version">v2.3</span></div>
+    </header>
+
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-copy"><p class="overline">Gestão inteligente · Ambiente privado</p><h1 id="hero-heading">O controlo começa<br>com <em>clareza.</em></h1><p class="lead">Conta demo da cTrader, saúde da ligação e decisões do simulador num único espaço. Informação separada, apresentação precisa e nenhuma operação enviada à corretora.</p></div>
+      <div class="hero-tile"><div class="t-top"><span class="status-dot"></span> GOLDBOT CONTROL</div><div><strong>Command Center</strong><small>IC Markets · cTrader Demo</small></div></div>
+    </section>
+
+    <section id="acesso" class="card access" aria-labelledby="access-heading">
+      <div class="access-head"><span class="icon-square"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><div><h2 id="access-heading">Acesso privado</h2><p>Introduz a chave de administração do GoldBot para carregar os dados. Os tokens e segredos cTrader ficam exclusivamente no servidor.</p></div></div>
+      <form id="access-form" class="form"><label class="input-label" for="adminKey">Chave de acesso</label><div class="form-row"><div class="input-wrap"><input id="adminKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" minlength="24" required placeholder="Introduzir chave privada" aria-describedby="form-helper"><button class="reveal" id="reveal" type="button" aria-label="Mostrar ou ocultar chave" title="Mostrar ou ocultar chave"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.6-6.3 10-6.3S22 12 22 12s-3.6 6.3-10 6.3S2 12 2 12Z"/><circle cx="12" cy="12" r="2.8"/></svg></button></div><button id="submit" class="btn gold" type="submit">Consultar painel <span aria-hidden="true">↗</span></button></div><p class="form-help" id="form-helper">A chave não é guardada no navegador. A consulta é efetuada apenas quando a solicitas.</p><div id="status" class="notice" role="status" aria-live="polite">Aguardamos uma consulta autenticada.</div></form>
+    </section>
+
+    <div id="results" hidden>
+      <div class="section-title"><div><h2>Visão geral</h2><p>Resumo da consulta autenticada. Os valores são fornecidos pelo servidor.</p></div><button id="refresh" class="btn quiet" type="button">Atualizar dados ↻</button></div>
+      <section class="overview" aria-label="Indicadores principais">
+        <article class="card metric tone-blue"><div class="meta"><span>Saldo cTrader Demo</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg></div><div class="value" id="topBalance">—</div><small>EUR · saldo demonstrativo</small></article>
+        <article class="card metric tone-red"><div class="meta"><span>Estado do monitor</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12h4l3-6 5 12 3-6h5"/></svg></div><div class="value" id="topMonitor">—</div><small>Verificação agendada</small></article>
+        <article class="card metric tone-gold"><div class="meta"><span>Saldo da simulação</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2v20M17 6H9a4 4 0 0 0 0 8h6a4 4 0 0 1 0 8H7"/></svg></div><div class="value" id="topPaper">—</div><small>USD · dinheiro virtual</small></article>
+        <article class="card metric tone-violet"><div class="meta"><span>Estado do agente</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="value" id="topAgent">—</div><small>Análise simulada</small></article>
+      </section>
+
+      <div class="split" style="margin-top:15px">
+        <section class="card panel blue" id="corretora" aria-labelledby="broker-title"><p class="cap">01 / Integração</p><h3 id="broker-title">Conta cTrader</h3><p class="desc">Consulta autenticada à conta IC Markets Demo. Sem permissões de negociação.</p><div class="data-rows"><div class="data-row"><span>Estado da ligação</span><strong id="brokerConnected">—</strong></div><div class="data-row"><span>Conta demo</span><strong id="brokerAccount">—</strong></div><div class="data-row"><span>Saldo disponível</span><strong id="brokerBalance">—</strong></div><div class="data-row"><span>Alavancagem</span><strong id="brokerLeverage">—</strong></div><div class="data-row"><span>Permissão</span><strong id="brokerPermission">—</strong></div><div class="data-row"><span>Última leitura</span><strong id="brokerTime">—</strong></div></div></section>
+        <section class="card panel red" id="monitor" aria-labelledby="monitor-title"><p class="cap">02 / Supervisão</p><h3 id="monitor-title">Monitor automático</h3><p class="desc">A verificação agendada acompanha a disponibilidade da ligação demo sem abrir posições.</p><div id="monitorBanner" class="monitor-banner"><span class="indicator"></span><div id="monitorMessage">A consultar o histórico de verificações…</div></div><div class="data-rows"><div class="data-row"><span>Último sucesso</span><strong id="monitorLast">—</strong></div><div class="data-row"><span>Estado registado</span><strong id="monitorState">—</strong></div><div class="data-row"><span>Agendamento previsto</span><strong>4× ao dia · UTC</strong></div></div><div class="panel-foot">00h07, 06h07, 12h07 e 18h07 UTC. O horário planeado não é uma garantia de execução ininterrupta.</div></section>
+      </div>
+
+      <section class="card paperbox" id="simulacao" aria-labelledby="paper-title"><div class="paper-head"><div><p class="cap" style="color:#e1bb79">03 / Estratégia virtual</p><h3 id="paper-title" style="margin:0;font-size:20px">GoldBot — Simulação independente</h3><p class="desc" style="margin-bottom:0">Análises e operações virtuais, sem utilização do saldo da IC Markets.</p></div><span class="pill"><span class="dot"></span> Paper trading</span></div>
+        <div class="paper-stats"><div class="paper-stat"><span>Saldo virtual</span><strong id="paperCash">—</strong></div><div class="paper-stat"><span>Operações registadas</span><strong id="paperTrades">—</strong></div><div class="paper-stat"><span>Posições virtuais</span><strong id="paperPositions">—</strong></div><div class="paper-stat"><span>Última cotação</span><strong id="paperPrice">—</strong></div></div>
+        <div class="data-rows" style="margin-top:10px"><div class="data-row"><span>Último ciclo de análise</span><strong id="paperLast">—</strong></div><div class="data-row"><span>Estado de execução</span><strong id="paperState">—</strong></div></div><div class="paper-tools"><button type="button" id="start" class="btn gold" hidden>Ativar simulação</button><button type="button" id="pause" class="btn ghost" hidden>Pausar agente</button><span id="paperHelp" class="helper">Controlo limitado à simulação virtual.</span></div>
+      </section>
+
+      <section class="card events" id="decisoes" aria-labelledby="events-title"><div class="paper-head"><div><p class="cap">04 / Histórico</p><h3 id="events-title" style="margin:0;font-size:19px">Últimas decisões do agente</h3></div><a href="/goldbot-v2.html" class="btn quiet" style="min-height:40px">Monitor detalhado ↗</a></div><div id="eventsContent"><div class="empty">A consultar decisões…</div></div></section>
+    </div>
+
+    <footer class="footer"><span><strong>GOLDBOT AI</strong> · Command Center v2.3<br>Design para utilização privada e evolução futura do produto.</span><span>Dados reais de consulta demo e simulação virtual. Esta interface não executa negociações na corretora e não oferece garantias de rentabilidade.</span></footer>
+  </main>
+</div>
+<script>
+'use strict';
+(()=>{
+  const $=id=>document.getElementById(id);
+  const eur=n=>Number.isFinite(Number(n)) && n!==null && n!=='' ?new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(Number(n)):'—';
+  const usd=n=>Number.isFinite(Number(n)) && n!==null && n!=='' ?new Intl.NumberFormat('pt-PT',{style:'currency',currency:'USD'}).format(Number(n)):'—';
+  const safeNum=n=>Number.isFinite(Number(n)) && n!==null && n!==''?Number(n):null;
+  const dateTime=value=>{if(!value)return 'Ainda não disponível'; const d=new Date(value);return Number.isNaN(d.getTime())?'Ainda não disponível':d.toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});};
+  let busy=false,authed=false,latestPaper=null;
+  const note=(message,type='')=>{const el=$('status');el.textContent=message;el.className='notice'+(type?' '+type:'');};
+  const headers=()=>({Authorization:'Bearer '+$('adminKey').value,Accept:'application/json'});
+  async function getPrivate(endpoint,method='GET',data){
+    const ctrl=new AbortController();const timeout=setTimeout(()=>ctrl.abort(),25000);
+    try{
+      const response=await fetch(endpoint,{method,headers:{...headers(),...(data?{'Content-Type':'application/json'}:{})},body:data?JSON.stringify(data):undefined,cache:'no-store',signal:ctrl.signal});
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(typeof result.error==='string'?result.error:'O servidor devolveu o estado '+response.status);
+      return result;
+    }catch(error){if(error.name==='AbortError')throw new Error('A consulta demorou demasiado. Tenta novamente.');throw error;}finally{clearTimeout(timeout);}
+  }
+  const setText=(id,value)=>{$(id).textContent=String(value??'—')};
+  function showBroker(d){
+    setText('topBalance',eur(d.balance));setText('brokerConnected',d.connected?'Ligado':'Desligado');
+    $('brokerConnected').className=d.connected?'success':'attention';setText('brokerAccount',d.login||'—');
+    setText('brokerBalance',eur(d.balance));setText('brokerLeverage',safeNum(d.leverage)!==null?'1:'+Number(d.leverage).toLocaleString('pt-PT'):'—');
+    setText('brokerPermission',d.permission==='view'?'Apenas leitura':'Não confirmada');
+    setText('brokerTime',dateTime(d.checkedAt));
+  }
+  function showHealth(h){
+    const checked=h&&typeof h==='object'?h:{};
+    const success=checked.connected===true;
+    const missing=checked.connected===null || checked.connected===undefined;
+    const text=success?'Última verificação automática concluída com sucesso.':missing?'Ainda não foi registada uma consulta automática.':'A última verificação registou uma falha. Consulta os registos do Netlify.';
+    $('monitorBanner').className='monitor-banner'+(success?' ok':'');
+    setText('monitorMessage',text);setText('topMonitor',success?'Ligação OK':missing?'Pendente':'Atenção');
+    setText('monitorState',success?'Ligação OK':missing?'Pendente':'Falha registada');
+    $('monitorState').className=success?'success':missing?'':'attention';
+    setText('monitorLast',dateTime(checked.lastSuccessAt));
+  }
+  function showPaper(p){
+    latestPaper=p;
+    const s=p.state||{};
+    setText('topPaper',usd(s.cash));setText('topAgent',p.enabled?'Ativo':p.masterEnabled?'Pausado':'Desativado');
+    setText('paperCash',usd(s.cash));setText('paperTrades',Array.isArray(s.trades)?s.trades.length:'—');
+    setText('paperPositions',Array.isArray(s.positions)?s.positions.length:'—');
+    setText('paperPrice',s.lastPrice&&safeNum(s.lastPrice.value)!==null?usd(s.lastPrice.value):'—');
+    setText('paperLast',dateTime(s.lastRunAt));setText('paperState',p.enabled?'Simulação ativa':p.masterEnabled?'Simulação pausada':'Indisponível / desativada');
+    $('start').hidden=!p.masterEnabled||p.enabled;$('pause').hidden=!p.enabled;
+    setText('paperHelp',p.masterEnabled?'Controlo limitado ao motor virtual.':'A ativação principal está desativada nas configurações do Netlify.');
+    const events=Array.isArray(s.events)?s.events.slice(0,8):[];
+    const wrap=$('eventsContent');wrap.replaceChildren();
+    if(!events.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='Ainda não há decisões registadas.';wrap.append(empty);return;}
+    const list=document.createElement('ol');list.className='event-list';
+    for(const e of events){
+      const li=document.createElement('li');li.className='event';const dot=document.createElement('span');dot.className='event-mark';dot.setAttribute('aria-hidden','true');
+      const info=document.createElement('div');const strong=document.createElement('strong');strong.textContent=String(e.action||'Evento');
+      const when=document.createElement('time');when.textContent=dateTime(e.at);
+      const detail=document.createElement('p');detail.textContent=String(e.detail||'Sem detalhes adicionais.');
+      info.append(strong,when,detail);li.append(dot,info);list.append(li);
+    }
+    wrap.append(list);
+  }
+  function unavailable(section,msg){
+    if(section==='health'){setText('topMonitor','Indisponível');setText('monitorMessage',msg);setText('monitorState','Não foi possível consultar');setText('monitorLast','—');}
+    if(section==='paper'){setText('topPaper','Indisponível');setText('topAgent','—');setText('paperCash','—');setText('paperTrades','—');setText('paperPositions','—');setText('paperPrice','—');setText('paperLast','—');setText('paperState','Indisponível');$('start').hidden=true;$('pause').hidden=true;$('eventsContent').textContent=msg;}
+  }
+  async function refreshAll(){
+    if(busy)return;busy=true;$('submit').disabled=true;$('refresh').disabled=true;
+    note('A consultar a conta demo e os estados do agente…');
+    try{
+      // The broker read is required. The health and paper queries are optional and read-only.
+      const broker=await getPrivate('/.netlify/functions/ctrader-demo-status?mode=live');
+      authed=true;showBroker(broker);$('results').hidden=false;
+      const [health,paper]=await Promise.allSettled([
+        getPrivate('/.netlify/functions/ctrader-demo-status?mode=health'),
+        getPrivate('/.netlify/functions/goldbot-status')
+      ]);
+      if(health.status==='fulfilled')showHealth(health.value);
+      else unavailable('health','Monitor temporariamente indisponível.');
+      if(paper.status==='fulfilled')showPaper(paper.value);
+      else unavailable('paper','Simulador temporariamente indisponível.');
+      note('Consulta concluída. Dados da cTrader Demo atualizados em '+dateTime(broker.checkedAt)+'.','ok');
+    }catch(error){note('Não foi possível consultar a conta: '+error.message,'error');if(!authed)$('results').hidden=true;}
+    finally{busy=false;$('submit').disabled=false;$('refresh').disabled=false;}
+  }
+  $('access-form').addEventListener('submit',e=>{e.preventDefault();refreshAll();});
+  $('refresh').addEventListener('click',refreshAll);
+  $('reveal').addEventListener('click',()=>{const input=$('adminKey');const showing=input.type==='password';input.type=showing?'text':'password';$('reveal').setAttribute('aria-label',showing?'Ocultar chave':'Mostrar chave');});
+  for(const [id,enabled] of [['start',true],['pause',false]]){
+    $(id).addEventListener('click',async()=>{
+      if(busy)return;
+      if(!latestPaper){note('Consulta o estado do simulador antes de alterar a execução.','error');return;}
+      busy=true;$('start').disabled=$('pause').disabled=true;
+      try{
+        const result=await getPrivate('/.netlify/functions/goldbot-control','POST',{enabled});
+        const state=await getPrivate('/.netlify/functions/goldbot-status');showPaper(state);
+        note(result.message||'Estado da simulação atualizado.','ok');
+      }catch(error){note('Não foi possível atualizar a simulação: '+error.message,'error');}
+      finally{busy=false;$('start').disabled=$('pause').disabled=false;}
+    });
+  }
+})();
+</script>
+</body>
+</html>
