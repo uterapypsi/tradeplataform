@@ -5,7 +5,7 @@
  * and trader snapshot (2121). No order, position-change or trading commands.
  */
 import {isAuthorized, privateJSON} from '../lib/goldbot-auth.mjs';
-import {readEnv} from '../lib/goldbot-services.mjs';
+import {getClientCredentials,getDemoStore,getUsableTokens,CTraderError} from '../lib/ctrader-tokens.mjs';
 
 const ENDPOINT='wss://demo.ctraderapi.com:5036';
 const LOGIN='10134087'; // cTrader's visible broker login, NOT ctidTraderAccountId.
@@ -121,22 +121,55 @@ async function readDemoAccount(config,{WebSocketClass=WebSocket,timeoutMs=13500}
   }
 }
 
-export default async function ctraderDemoStatus(request){
-  if(request.method!=='GET')return privateJSON({error:'Método não permitido'},405);
-  if(!isAuthorized(request))return privateJSON({error:'Não autorizado'},401);
-  const clientId=cleanValue(readEnv('CTRADER_CLIENT_ID'));
-  const clientSecret=cleanValue(readEnv('CTRADER_CLIENT_SECRET'));
-  const accessToken=cleanValue(readEnv('CTRADER_DEMO_ACCESS_TOKEN'));
-  const refreshToken=cleanValue(readEnv('CTRADER_DEMO_REFRESH_TOKEN'));
-  if(!clientId||!clientSecret||!accessToken||!refreshToken)
-    return privateJSON({error:'Uma ou mais credenciais cTrader não estão disponíveis no Functions/Production'},503);
+/** Execute one authentic, account-specific DEMO read and persist a sanitized health snapshot. */
+export async function checkAndRecord({source='manual'}={}){
+  const store=getDemoStore();
+  const healthKey=source==='scheduled'?'monitor-health':'manual-health';
+  const checkedAt=new Date().toISOString();
   try{
-    const result=await readDemoAccount({clientId,clientSecret,accessToken});
-    return privateJSON(result);
-  } catch(error){
-    if(error instanceof StatusError)return privateJSON({error:error.message,code:error.code},502);
-    return privateJSON({error:'Falha inesperada na consulta da conta demo. Verifica os logs Netlify, sem expor tokens.'},503);
+    const credentials=getClientCredentials();
+    const tokens=await getUsableTokens(store,credentials);
+    const snapshot=await readDemoAccount({clientId:credentials.clientId,clientSecret:credentials.clientSecret,accessToken:tokens.accessToken});
+    const safe={connected:true,environment:'demo',permission:'view',login:snapshot.login,
+      broker:snapshot.broker,balance:snapshot.balance,balanceCurrency:snapshot.balanceCurrency,
+      leverage:snapshot.leverage,checkedAt:snapshot.checkedAt};
+    await store.setJSON(healthKey,{...safe,lastSuccessAt:snapshot.checkedAt,lastError:null,autoRefreshConfigured:true});
+    return safe;
+  }catch(error){
+    const safeError=error instanceof CTraderError||error instanceof StatusError
+      ?{code:error.code,message:error.message}
+      :{code:'UNAVAILABLE',message:'Consulta indisponível. Verifica os logs do Netlify, sem divulgar credenciais.'};
+    // Store only sanitized health data; the previous confirmed balance is historical.
+    try {
+      const previous=await store.get(healthKey,{type:'json'});
+      await store.setJSON(healthKey,{
+        connected:false,login:LOGIN,environment:'demo',permission:'view',
+        lastSuccessAt:previous?.lastSuccessAt||null,
+        previousBalance:previous?.connected?previous.balance:previous?.previousBalance??null,
+        lastError:{...safeError,at:checkedAt},checkedAt,
+      });
+    }catch{ /* An outage must not expose a token or raw broker response. */ }
+    throw new StatusError(safeError.code,safeError.message);
   }
 }
 
-export {readDemoAccount, TYPES};
+/** GET ?mode=health reads the most recent background check, without contacting the broker. */
+export default async function ctraderDemoStatus(request){
+  if(request.method!=='GET')return privateJSON({error:'Método não permitido'},405);
+  if(!isAuthorized(request))return privateJSON({error:'Não autorizado'},401);
+  try{
+    const mode=new URL(request.url).searchParams.get('mode');
+    if(mode==='health'){
+      const state=await getDemoStore().get('monitor-health',{type:'json'});
+      return privateJSON(state||{connected:null,environment:'demo',login:LOGIN,
+        message:'A monitorização ainda não realizou uma consulta.'});
+    }
+    if(mode&&mode!=='live')return privateJSON({error:'Modo desconhecido'},400);
+    return privateJSON(await checkAndRecord());
+  }catch(error){
+    if(error instanceof StatusError)return privateJSON({error:error.message,code:error.code},502);
+    return privateJSON({error:'Serviço temporariamente indisponível'},503);
+  }
+}
+
+export {readDemoAccount,TYPES};
