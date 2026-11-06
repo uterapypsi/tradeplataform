@@ -7,7 +7,7 @@ export const store=()=>getStore({name:'goldbot-v3-tenants',consistency:'strong'}
 export const idFromKey=key=>typeof key==='string'&&/^gb3_([a-f0-9]{12})_[A-Za-z0-9_-]{40,64}$/.test(key)?key.split('_')[1]:null;
 const digest=v=>createHash('sha256').update(v).digest('hex');
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
-const const keySeed=()=>String(readEnv('GOLDBOT_V3_DATA_KEY')||'').trim();||`${readEnv('CTRADER_CLIENT_SECRET')||''}\n${readEnv('GOLDBOT_V2_ADMIN_TOKEN')||''}`;
+const keySeed=()=>String(readEnv('GOLDBOT_V3_DATA_KEY')||'').trim();
 function encryptionKey(uid){
   const seed=keySeed();requireV3(seed.length>=32,'CONFIG','Segredo de encriptação não configurado.',503);
   return createHash('sha256').update(`goldbot-v3-demo\0${uid}\0${seed}`).digest();
@@ -39,12 +39,11 @@ export const saveTenant=async(uid,patch,s=store())=>{
   }
   throw new V3Error('BUSY','Alteração concorrente; tenta novamente.',409);
 };
-const adminToken=()= const adminToken=()=>String(readEnv('GOLDBOT_V3_AUTH_SECRET')||'').trim();||'');
+const adminToken=()=>String(readEnv('GOLDBOT_V3_AUTH_SECRET')||'').trim();
 export const isAdmin=req=>{
   const a=String(req.headers.get('Authorization')||'');
   const t=a.startsWith('Bearer ')?a.slice(7):'';
-  const const secret=adminToken();return secret.length>=32&&equal(t,secret);
-};
+  const secret=adminToken();return secret.length>=32&&equal(t,secret);
 export const requireAdmin=req=>requireV3(isAdmin(req),'UNAUTHORIZED','Administração não autorizada.',401);
 export const requireTenant=async(req,s=store())=>{
   const auth=String(req.headers.get('Authorization')||'');
