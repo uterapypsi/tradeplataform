@@ -138,6 +138,10 @@ button('pause',async()=>{await api('POST',{action:'pause'});renderClient(await a
 if(new URL(location.href).searchParams.get('connection')){
   const ok=new URL(location.href).searchParams.get('connection')==='ok';
   status(ok?'Conta DEMO autorizada. Introduz novamente a tua chave para consultar o estado.':'Não foi possível concluir a autorização. Introduz a chave e repete a ligação.',ok?'ok':'bad');
+  const reason = new URL(location.href).searchParams.get('reason');
+if (reason && /^[A-Z0-9_]{1,36}$/.test(reason)) {
+  status('Falha na autorização cTrader. Código: ' + reason, 'bad');
+}
   history.replaceState(null,'',location.pathname);
 }
 </script>
