@@ -6,11 +6,22 @@ import {riskGate,summarizeNews} from '../../public/intelligence.js';
 import {V3,V3Error,requireV3,lastClosedBars,evaluateSignal,canArm} from './goldbot-v3-policy.mjs';
 import {store,getTenant,saveTenant,unprotect,protect} from './goldbot-v3-store.mjs';
 import {withDemoBroker,getBrokerSnapshot,prepareBuy,submitDemoBuy} from './goldbot-v3-broker.mjs';
-const clientCreds=()=>{
-  const clientId=String(readEnv('CTRADER_CLIENT_ID')||'').trim();
-  const clientSecret=String(readEnv('CTRADER_CLIENT_SECRET')||'').trim();
-  requireV3(clientId&&clientSecret,'CONFIG','Credenciais da aplicação cTrader não configuradas.',503);
-  return {clientId,clientSecret};
+const clientCreds = () => {
+  const read = name => String(
+    (typeof Netlify !== 'undefined' && Netlify.env?.get?.(name)) ||
+    process.env[name] || ''
+  ).trim();
+
+  const clientId = read('CTRADER_CLIENT_ID');
+  const clientSecret = read('CTRADER_CLIENT_SECRET');
+
+  requireV3(clientId, 'CLIENT_ID_MISSING',
+    'Client ID não disponível no servidor.', 503);
+
+  requireV3(clientSecret, 'CLIENT_SECRET_MISSING',
+    'Client Secret não disponível no servidor.', 503);
+
+  return { clientId, clientSecret };
 };
 const tokenUrl=fields=>{
   const url=new URL('https://openapi.ctrader.com/apps/token');
