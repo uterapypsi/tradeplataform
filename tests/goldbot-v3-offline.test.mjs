@@ -1,8 +1,10 @@
 // Policy cases from the GoldBot 3.1 offline package, exercised against repository code.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {V3,sizeDemoBuy,evaluateSignal,canArm} from '../netlify/lib/goldbot-v3-policy.mjs';
-import {PT,demoOrderIntent,submitDemoBuy,reconcileDemoOrder} from '../netlify/lib/goldbot-v3-broker.mjs';
+import {readFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
+import {V3,V3Error,sizeDemoBuy,evaluateSignal,canArm} from '../netlify/lib/goldbot-v3-policy.mjs';
+import {DemoSocket,PT,demoOrderIntent,submitDemoBuy,reconcileDemoOrder} from '../netlify/lib/goldbot-v3-broker.mjs';
 
 const history=Array.from({length:22},(_,i)=>({t:new Date(Date.UTC(2026,9,1+i)).toISOString(),c:4000+i}));
 const valid={balance:1000,currency:'EUR',eurUsd:1.15,ask:4000,bid:3999,close:3990,volMin:1,volMax:1000,volStep:1};
@@ -67,7 +69,7 @@ test('Bloqueia envio em conta real ou com permissão de leitura',async()=>{
   await assert.rejects(submitDemoBuy({...ctx,scope:0},request(ctx)),{code:'VIEW_ONLY'});
 });
 
-function brokerFixture({orderStatus=2,executedVolume=plan.volume,stop=true,found=true,
+function brokerFixture({orderStatus=2,executedVolume=plan.volume,stop=true,take=true,found=true,
   accountId=123,wrongOrder=false}={}){
   const types=[];
   const ctx=context(async(type)=>{
@@ -77,7 +79,7 @@ function brokerFixture({orderStatus=2,executedVolume=plan.volume,stop=true,found
       tradeData:{...tradeData,symbolId:wrongOrder?43:42},positionId:'10'};
     const position={positionId:'10',price:4000,
       stopLoss:stop?4000-plan.relativeStopLoss/100000:undefined,
-      takeProfit:4000+plan.relativeTakeProfit/100000,
+      takeProfit:take?4000+plan.relativeTakeProfit/100000:undefined,
       tradeData:{...tradeData,volume:executedVolume}};
     const reply={ctidTraderAccountId:accountId};
     if(type===PT.RECONCILE_REQ)return {...reply,position:[position]};
@@ -143,8 +145,8 @@ test('Recusa respostas de outra conta ou instrumento',async()=>{
   await assert.rejects(reconcileDemoOrder(wrong.ctx,wrong.intent),{code:'ORDER_MISMATCH'});
 });
 
-test('Runner reserva a conta antes do envio e bloqueia novo ciclo após timeout',async t=>{
-  const {runTenantDaily,reconcileTenantDemo}=await import('../netlify/lib/goldbot-v3-runner.mjs');
+async function runnerFixture(t){
+  const {runTenantDaily,reconcileTenantDemo,getDemoOrderState}=await import('../netlify/lib/goldbot-v3-runner.mjs');
   const {protect}=await import('../netlify/lib/goldbot-v3-store.mjs');
   const env={CTRADER_CLIENT_ID:'mock-client',CTRADER_CLIENT_SECRET:'mock-secret',
     GOLDBOT_V3_DATA_KEY:'mock-key-for-offline-testing-only',GOLDBOT_V3_ALLOW_DEMO_ORDERS:'true'};
@@ -175,7 +177,8 @@ test('Runner reserva a conta antes do envio e bloqueia novo ciclo após timeout'
     accessToken:'mock-access-token-1234',refreshToken:'mock-refresh-token-1234',
     expiresAt:Date.now()+9*86400000
   },uid));
-  const ctx=context(async type=>{
+  let submit=()=>{throw new V3Error('TIMEOUT','Simulated timeout');};
+  const ctx=context(async (type,_expected,_payload,onSent)=>{
     if(type===PT.TRADER_REQ)return {trader:{traderLogin:'12345',balance:100000,moneyDigits:2,depositAssetId:1}};
     if(type===PT.ASSETS_REQ)return {asset:[{assetId:1,name:'EUR'}]};
     if(type===PT.SYMBOL_LIST_REQ)return {symbol:[{symbolId:42,symbolName:'XAUUSD'}]};
@@ -186,7 +189,7 @@ test('Runner reserva a conta antes do envio e bloqueia novo ciclo após timeout'
       const reservation=await s.get(accountKey);
       if(reservation?.status!=='SUBMITTING')return {};
       sends++;
-      throw new Error('simulated timeout');
+      return submit(onSent);
     }
     throw new Error('unexpected broker request');
   });
@@ -194,14 +197,130 @@ test('Runner reserva a conta antes do envio e bloqueia novo ciclo após timeout'
   ctx.socket.spot=async()=>({ask:4000,bid:3999});
   const broker=async(_credentials,callback)=>callback(ctx);
   const signal={action:'BUY',date:'2026-11-09',close:3990};
-  const result=await runTenantDaily(uid,{signal,fx:1.15,s,broker});
+  return {uid,tenant,s,broker,signal,reconcileTenantDemo,getDemoOrderState,
+    run:(overrides={})=>runTenantDaily(uid,{signal,fx:1.15,s,broker,...overrides}),
+    sends:()=>sends,setSubmit:fn=>{submit=fn;}};
+}
+
+test('Runner reserva a conta antes do envio e bloqueia novo ciclo após timeout',async t=>{
+  const {uid,tenant,s,broker,signal,reconcileTenantDemo,getDemoOrderState,run,sends,setSubmit}=await runnerFixture(t);
+  setSubmit(onSent=>{onSent();throw new V3Error('TIMEOUT','Simulated timeout');});
+  const result=await run();
   assert.equal(result.action,'UNKNOWN');
   assert.equal(result.reconciliationRequired,true);
-  assert.equal(sends,1);
+  assert.equal(result.orderSent,true);
+  assert.equal(sends(),1);
   assert.equal((await s.get(`tenant/${uid}`)).armed,false);
   assert.equal((await reconcileTenantDemo(tenant,{s,broker})).status,'UNKNOWN');
   await s.setJSON(`tenant/${uid}`,tenant);
-  const next=await runTenantDaily(uid,{signal:{...signal,date:'2026-11-10'},fx:1.15,s,broker});
+  assert.equal((await getDemoOrderState(tenant,s)).reconciliationRequired,true);
+  const next=await run({signal:{...signal,date:'2026-11-10'}});
   assert.equal(next.action,'RECONCILIATION_REQUIRED');
-  assert.equal(sends,1);
+  assert.equal(sends(),1);
+});
+
+test('Falta de take-profit mantém a conta bloqueada',async()=>{
+  const {ctx,intent}=brokerFixture({take:false});
+  const result=await reconcileDemoOrder(ctx,intent);
+  assert.equal(result.status,'FILLED');
+  assert.equal(result.protectionVerified,false);
+  assert.equal(result.resolved,false);
+});
+
+test('Histórico contraditório não invalida uma execução já observada',async()=>{
+  const partial=brokerFixture({orderStatus:5,executedVolume:0});
+  await assert.rejects(reconcileDemoOrder(partial.ctx,{...partial.intent,status:'PARTIALLY_FILLED'}),
+    {code:'ORDER_STATE'});
+  const filled=brokerFixture({orderStatus:2,executedVolume:0});
+  await assert.rejects(reconcileDemoOrder(filled.ctx,filled.intent),{code:'ORDER_VOLUME'});
+});
+
+test('Duas execuções simultâneas do mesmo sinal produzem apenas um envio',async t=>{
+  const {run,sends}=await runnerFixture(t);
+  const result=await Promise.all([run(),run()]);
+  assert.deepEqual(result.map(r=>r.action).sort(),['DUPLICATE','UNKNOWN']);
+  assert.equal(sends(),1);
+});
+
+test('Reserva da conta bloqueia envios simultâneos em datas diferentes',async t=>{
+  const {run,signal,sends}=await runnerFixture(t);
+  const result=await Promise.all([run(),run({signal:{...signal,date:'2026-11-10'}})]);
+  assert.equal(result.filter(r=>r.action==='UNKNOWN').length,1);
+  assert.equal(sends(),1);
+});
+
+test('Falha de ligação antes do envio não cria ordem incerta',async t=>{
+  const {run,tenant,s,getDemoOrderState,setSubmit}=await runnerFixture(t);
+  setSubmit(()=>{throw new V3Error('NOT_CONNECTED','Socket closed before send');});
+  const result=await run();
+  assert.equal(result.orderStatus,'NOT_SENT');
+  assert.equal(result.orderSent,false);
+  assert.equal((await getDemoOrderState(tenant,s)).reconciliationRequired,false);
+  assert.equal((await s.get(`tenant/${tenant.id}`)).armed,false);
+});
+
+test('Pausa de emergência durante a reserva impede o envio',async t=>{
+  const {run,tenant,s,getDemoOrderState,sends}=await runnerFixture(t);
+  const set=s.setJSON;
+  s.setJSON=async(key,data,options)=>{
+    const result=await set(key,data,options);
+    if(key==='demo-order/123'&&data.status==='SUBMITTING')await set('master',{enabled:false});
+    return result;
+  };
+  const result=await run();
+  assert.equal(result.code,'MASTER_OFF');
+  assert.equal(result.orderSent,false);
+  assert.equal(sends(),0);
+  assert.equal((await getDemoOrderState(tenant,s)).reconciliationRequired,false);
+});
+
+test('WebSocket interrompido durante subscrição cancela a espera da cotação',async()=>{
+  class OfflineSocket extends EventTarget {
+    static OPEN=1;
+    readyState=1;
+    send(){this.dispatchEvent(new Event('close'));}
+    close(){}
+  }
+  const socket=new DemoSocket({WebSocketClass:OfflineSocket});
+  await socket.open();
+  try{
+    await assert.rejects(socket.spot(123,42),{code:'CONNECTION_CLOSED'});
+    assert.equal(socket.waiters.size,0);
+    assert.equal(socket.spots.size,0);
+  }finally{socket.close();}
+});
+
+test('Painel distingue envio, aceitação, execução, rejeição e incerteza',()=>{
+  const html=readFileSync(new URL('../public/goldbot-v3.html',import.meta.url),'utf8');
+  const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const env={document:{getElementById:()=>({addEventListener(){}})},URL,
+    location:{href:'https://example.invalid/'}};
+  runInNewContext(script,env);
+  const message=env.orderMessage;
+  assert.match(message({status:'UNKNOWN',orderSent:true}),/Ordem enviada.*Novas operações bloqueadas/);
+  assert.match(message({status:'UNKNOWN',orderSent:null}),/Envio por confirmar/);
+  assert.match(message({status:'ACCEPTED'}),/aceite.*Execução pendente/);
+  assert.match(message({status:'PARTIALLY_FILLED'}),/parcialmente executada/);
+  assert.match(message({status:'FILLED',resolved:true,protectionVerified:true}),/totalmente executada.*take-profit verificados/);
+  assert.match(message({status:'REJECTED',resolved:true}),/rejeitada/);
+  assert.match(message({status:'NOT_SENT',resolved:true}),/não enviada/);
+});
+
+test('Reconciliação confirmada liberta a reserva e mantém o agente pausado',async t=>{
+  const {run,tenant,s,reconcileTenantDemo,getDemoOrderState,sends}=await runnerFixture(t);
+  await run();
+  const pending=(await getDemoOrderState(tenant,s)).order;
+  const {ctx}=brokerFixture({orderStatus:3,executedVolume:0});
+  const result=await reconcileTenantDemo(tenant,{s,broker:async(_credentials,callback)=>
+    callback({...ctx,socket:{call:async(type,expected,payload)=>{
+      if(type===PT.ORDER_LIST_REQ)return {ctidTraderAccountId:123,
+        order:[{orderId:'42',clientOrderId:pending.clientOrderId}]};
+      const reply=await ctx.socket.call(type,expected,payload);
+      if(reply.order)reply.order.tradeData.volume=pending.volume;
+      return reply;
+    }}})});
+  assert.equal(result.status,'REJECTED');
+  assert.equal((await getDemoOrderState(tenant,s)).reconciliationRequired,false);
+  assert.equal((await s.get(`tenant/${tenant.id}`)).armed,false);
+  assert.equal(sends(),1);
 });

@@ -56,14 +56,15 @@ export class DemoSocket {
     }
     // An order execution can have one of several valid exchange states.
   }
-  call(type,expected,payload){
+  call(type,expected,payload,onSent){
     requireV3(this.socket?.readyState===this.WebSocketClass.OPEN,'NOT_CONNECTED','Sem ligação à cTrader.',503);
     const id='gb3-'+(++this.seq);
     return new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>{this.waiters.delete(id);reject(new V3Error('TIMEOUT','Confirma o estado na corretora antes de tentar outra operação.',504));},this.timeout);
       this.waiters.set(id,{expected,resolve,reject,timer});
       try{this.socket.send(JSON.stringify({clientMsgId:id,payloadType:type,payload}));}
-      catch{clearTimeout(timer);this.waiters.delete(id);reject(new V3Error('SEND_FAILED','Falha de comunicação com cTrader.',503));}
+      catch{clearTimeout(timer);this.waiters.delete(id);reject(new V3Error('SEND_FAILED','Falha de comunicação com cTrader.',503));return;}
+      onSent?.();
     });
   }
   async spot(accountId,symbolId){
@@ -72,8 +73,18 @@ export class DemoSocket {
       const timer=setTimeout(()=>{this.spots.delete(key);reject(new V3Error('NO_QUOTE','Cotação atual indisponível.',503));},7000);
       this.spots.set(key,{resolve,reject,timer});
     });
-    await this.call(PT.SPOT_REQ,PT.SPOT_RES,{ctidTraderAccountId:accountId,symbolId:[symbolId],subscribeToSpotTimestamp:true});
-    const row=await spotPromise;
+    let row;
+    try{
+      [,row]=await Promise.all([
+        Promise.resolve().then(()=>this.call(PT.SPOT_REQ,PT.SPOT_RES,{
+          ctidTraderAccountId:accountId,symbolId:[symbolId],subscribeToSpotTimestamp:true
+        })),
+        spotPromise
+      ]);
+    }finally{
+      clearTimeout(this.spots.get(key)?.timer);
+      this.spots.delete(key);
+    }
     const bid=Number(row.bid)/100000,ask=Number(row.ask)/100000;
     const ts=Number(row.timestamp);
     const ms=ts>1e12?ts:ts*1000;
@@ -130,6 +141,8 @@ export async function prepareBuy(ctx,{close,eurUsd,balance,currency,limitedRisk=
     s.call(PT.SYMBOL_LIST_REQ,PT.SYMBOL_LIST_RES,{ctidTraderAccountId:id}),
     s.call(PT.RECONCILE_REQ,PT.RECONCILE_RES,{ctidTraderAccountId:id})
   ]);
+  requireV3(String(positions.ctidTraderAccountId)===String(id),
+    'ACCOUNT_MISMATCH','A resposta pertence a outra conta DEMO.',502);
   // Fail closed for ANY pre-existing broker position or pending order.
   requireV3((positions.position||[]).length===0 && (positions.order||[]).length===0,
     'EXPOSURE','Já existem posições ou ordens na conta demo; o GoldBot não irá abrir outras.');
@@ -139,7 +152,7 @@ export async function prepareBuy(ctx,{close,eurUsd,balance,currency,limitedRisk=
   const brief=matched[0];
   const detail=await s.call(PT.SYMBOL_REQ,PT.SYMBOL_RES,{ctidTraderAccountId:id,symbolId:[brief.symbolId]});
   const full=(detail.symbol||[]).find(x=>String(x.symbolId)===String(brief.symbolId));
-  requireV3(full,'SYMBOL_PROFILE','Metadados do instrumento indisponíveis.');
+  requireV3(full&&full.digits!=null&&Number.isInteger(Number(full.digits))&&Number(full.digits)>=0&&Number(full.digits)<=10,'SYMBOL_PROFILE','Metadados do instrumento indisponíveis.');
   const quote=await s.spot(id,brief.symbolId);
   const plan=sizeDemoBuy({balance,currency,eurUsd,ask:quote.ask,bid:quote.bid,close,
     volMin:Number(full.minVolume),volMax:Number(full.maxVolume),volStep:Number(full.stepVolume),
@@ -159,17 +172,17 @@ export function demoOrderIntent(ctx,{symbolId,plan,uid,date}){
     status:'SUBMITTING',resolved:false};
 }
 
-export async function submitDemoBuy(ctx,intent){
+export async function submitDemoBuy(ctx,intent,onSent){
   requireV3(isDemoAccount(ctx.account),'LIVE_BLOCK','Apenas contas DEMO são permitidas.',403);
   requireV3(isTradeScope(ctx.scope),'VIEW_ONLY','Falta autorizar negociação na cTrader.',403);
   const {symbolId,volume,relativeStopLoss,relativeTakeProfit,clientOrderId}=intent;
   const event=await ctx.socket.call(PT.NEW_ORDER,PT.EXECUTION,{
     ctidTraderAccountId:ctx.accountId,symbolId,orderType:1,tradeSide:1,volume,
     relativeStopLoss,relativeTakeProfit,clientOrderId,label:'GOLDBOT-DEMO-V3',
-    comment:'Conta demonstracao, estrategia diaria automatica'});
+    comment:'Conta demonstracao, estrategia diaria automatica'},onSent);
   const matches=String(event.ctidTraderAccountId)===intent.accountId &&
     (!event.order?.clientOrderId || event.order.clientOrderId===clientOrderId);
-  return {...intent,status:matches?(executionStates[event.executionType]||'UNKNOWN'):'UNKNOWN',
+  return {...intent,orderSent:true,status:matches?(executionStates[event.executionType]||'UNKNOWN'):'UNKNOWN',
     orderId:matches&&event.order?.orderId!=null?String(event.order.orderId):null};
 }
 
@@ -207,8 +220,11 @@ export async function reconcileDemoOrder(ctx,intent){
     'ORDER_VOLUME','Volume executado inválido.',502);
   let status=orderStates[order.orderStatus]||'UNKNOWN';
   if(status==='ACCEPTED'&&executedVolume>0)status='PARTIALLY_FILLED';
-  if((status==='FILLED'&&executedVolume!==intent.volume)||
-    (['PARTIALLY_FILLED','FILLED'].includes(intent.status)&&executedVolume===0))status='UNKNOWN';
+  requireV3(status!=='FILLED'||executedVolume===intent.volume,
+    'ORDER_VOLUME','Execução total sem confirmação do volume solicitado.',502);
+  requireV3((intent.status!=='FILLED'||status==='FILLED')&&
+    (intent.status!=='PARTIALLY_FILLED'||executedVolume>0),
+    'ORDER_STATE','A corretora devolveu um estado incompatível com a execução observada.',502);
   const positions=executedVolume>0?(await read(PT.RECONCILE_REQ,PT.RECONCILE_RES)).position||[]:[];
   const position=positions.find(p=>order.positionId!=null &&
     String(p.positionId)===String(order.positionId));
@@ -218,7 +234,7 @@ export async function reconcileDemoOrder(ctx,intent){
     Number(position.tradeData?.tradeSide)===1 && Number(position.tradeData?.volume)===executedVolume &&
     Math.abs(entry-stopLoss-intent.relativeStopLoss/100000)<=intent.priceTick &&
     Math.abs(takeProfit-entry-intent.relativeTakeProfit/100000)<=intent.priceTick);
-  return {...intent,orderId,status,executedVolume,positionId:order.positionId==null?null:String(order.positionId),
+  return {...intent,orderSent:true,orderId,status,executedVolume,positionId:order.positionId==null?null:String(order.positionId),
     protectionVerified,resolved:terminalStates.includes(status)&&(executedVolume===0||protectionVerified),
     reconciledAt:new Date().toISOString()};
 }

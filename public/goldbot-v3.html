@@ -47,7 +47,7 @@ button{height:51px;border-radius:12px;padding:0 16px;border:1px solid #46434a;ba
 <div class="stats"><div class="stat"><small>Utilizador</small><strong id="displayName">—</strong></div><div class="stat"><small>Conta demo</small><strong id="displayAccount">Não ligada</strong></div><div class="stat"><small>Autorização</small><strong id="displayScope">Pendente</strong></div></div>
 <div class="form" style="margin-top:18px"><div class="field"><label for="demoLogin">Número da conta DEMO cTrader</label><input id="demoLogin" inputmode="numeric" type="text" placeholder="Número da conta demo" maxlength="12"></div><button id="connect">Autorizar conta demo</button></div><div class="btnrow"><button id="consult" class="quiet">Consultar saldo da corretora</button><button id="preview" class="quiet">Analisar sinal sem negociar</button></div><div class="hint" id="brokerInfo">Não foram feitas consultas adicionais à corretora.</div></section>
 <section class="card red"><h2>Controlo de ordens DEMO</h2><p>O GoldBot só pode abrir uma compra virtual na corretora com stop de proteção quando existir um sinal validado, autorização de negociação, risco permitido e ativação expressa.</p>
-<div class="btnrow"><button id="arm" class="primary">Ativar agente DEMO</button><button id="runOnce" class="quiet">Executar ciclo DEMO agora</button><button id="reconcileOrder" class="quiet">Reconciliar última ordem DEMO</button><button id="pause" class="danger">Pausar agente</button></div><div class="hint" id="clientState">Desativado por segurança.</div></section>
+<div class="btnrow"><button id="arm" class="primary">Ativar agente DEMO</button><button id="runOnce" class="quiet">Executar ciclo DEMO agora</button><button id="reconcileOrder" class="quiet">Reconciliar última ordem DEMO</button><button id="pause" class="danger">Pausar agente</button></div><div class="hint" id="clientState">Desativado por segurança.</div><div class="hint" id="orderState" role="status"></div></section>
 <section class="card gold"><h2>Regras de proteção</h2><div class="stats"><div class="stat"><small>Risco máximo estimado / ordem</small><strong>0,5%</strong></div><div class="stat"><small>Proteção de stop</small><strong>2%</strong></div><div class="stat"><small>Limite de posições</small><strong>1</strong></div></div><p style="margin-top:13px">Limites de exposição, confirmação de cotação, sem duplicações e pausa por perda de 2% do saldo inicial. Os stops podem sofrer slippage e não garantem o valor de perda previsto.</p></section>
 </div>
 <footer class="privacy"><span><b>GoldBot AI 3.0</b> · Portal individual, integração DEMO</span><span>Sem promessas de lucro · Nenhuma conta real autorizada</span></footer>
@@ -55,16 +55,17 @@ button{height:51px;border-radius:12px;padding:0 16px;border:1px solid #46434a;ba
 <script>
 const $=id=>document.getElementById(id);
 const ROOT='/.netlify/functions/goldbot-v3';
-let key='',role='',users=[],lastKey='';
+let key='',role='',users=[],lastKey='',clientState=null;
 function status(message,type=''){$('notice').textContent=message;$('notice').className='notice'+(type?' '+type:'');}
 async function api(method='GET',data=null,query=''){
   const response=await fetch(ROOT+query,{method,headers:{Authorization:'Bearer '+key,Accept:'application/json',...(data?{'Content-Type':'application/json'}:{})},body:data?JSON.stringify(data):undefined,cache:'no-store',credentials:'same-origin'});
-  const body=await response.json().catch(()=>({error:'Resposta inesperada do servidor.'}));
-  if(!response.ok)throw Error(body.error||'HTTP '+response.status);
+  const body=await response.json();
+  if(!response.ok)throw Object.assign(Error(body.error||'HTTP '+response.status),
+    {serverResponse:Boolean(body.code)});
   return body;
 }
 function asText(id,value){$(id).textContent=String(value??'—')}
-function button(id,fn){$(id).addEventListener('click',async()=>{const b=$(id);b.disabled=true;try{await fn()}catch(e){status(e.message,'bad')}finally{b.disabled=false}})}
+function button(id,fn){$(id).addEventListener('click',async()=>{const b=$(id);b.disabled=true;try{await fn()}catch(e){status(e.message,'bad')}finally{b.disabled=false;if(clientState&&['arm','runOnce','reconcileOrder'].includes(id))renderOrderControls(clientState)}})}
 async function load(){
   const r=await api();role=r.role;
   $('admin').hidden=role!=='admin';$('client').hidden=role!=='user';
@@ -88,13 +89,43 @@ function renderAdmin(r){
     };line.append(revoke)}root.append(line);
   }
 }
+function orderMessage(order){
+  const labels={
+    SUBMITTING:'Envio em curso. A aguardar confirmação.',
+    ACCEPTED:'Ordem aceite pela cTrader. Execução pendente.',
+    REPLACED:'Ordem substituída. Execução pendente.',
+    PARTIALLY_FILLED:'Ordem parcialmente executada.',
+    FILLED:'Ordem totalmente executada.',
+    REJECTED:'Ordem rejeitada pela cTrader.',
+    CANCELLED:'Ordem cancelada pela cTrader.',
+    EXPIRED:'Ordem expirada.',
+    NOT_SENT:'Ordem não enviada.'
+  };
+  const label=labels[order.status]||(order.orderSent===true
+    ?'Ordem enviada. Receção e execução por confirmar.'
+    :'Estado da ordem incerto. Envio por confirmar.');
+  const volume=order.executedVolume==null?'':' Volume executado: '+order.executedVolume/100+' unidades.';
+  const protection=order.protectionVerified?' Stop-loss e take-profit verificados.':'';
+  const pending=order.resolved?'':' Reconciliação pendente. Novas operações bloqueadas.';
+  return label+volume+protection+pending;
+}
+function renderOrderControls(r){
+  const u=r.user||{};
+  const blocked=r.reconciliationRequired;
+  $('arm').disabled=u.armed||!u.account||!r.globalEnabled||blocked;
+  $('runOnce').disabled=!u.armed||!r.globalEnabled||blocked;
+  $('reconcileOrder').disabled=!r.order;
+}
 function renderClient(r){
+  clientState=r;
   const u=r.user||{};
   asText('displayName',u.name);asText('displayAccount',u.account?.login||'Não ligada');
   asText('displayScope',u.account?(u.account.scope===1||u.account.scope==='1'?'DEMO autorizada':'Apenas leitura'):'Pendente');
   asText('clientState',u.armed?'Agente DEMO armado. Próxima decisão no ciclo agendado.':'Agente DEMO pausado.');
-  $('arm').disabled=u.armed||!u.account||!r.globalEnabled;
-  $('runOnce').disabled=!u.armed||!r.globalEnabled;
+  renderOrderControls(r);
+  asText('orderState',r.order?orderMessage(r.order):r.reconciliationRequired
+    ?'Há uma ordem por reconciliar nesta conta DEMO. Novas operações bloqueadas.'
+    :'');
   $('demoLogin').value=u.account?.login||'';
   if(u.lastDecision)asText('brokerInfo',u.lastDecision.action+' · '+u.lastDecision.at+(u.lastDecision.code?' ('+u.lastDecision.code+')':''));
 }
@@ -130,20 +161,37 @@ button('arm',async()=>{
 });
 button('runOnce',async()=>{
   if(!confirm('Executar um ciclo de análise agora? Se houver sinal válido e limites cumpridos, poderá abrir UMA ordem DEMO.'))return;
-  const r=await api('POST',{action:'run-once',confirmation:'EXECUTAR DEMO'});
-  asText('brokerInfo',(r.action||'SEM_SINAL')+' · '+(r.date||'')+' · '+(r.reason||r.code||''));
-  if(r.reconciliationRequired||r.orderSent===null||r.action==='RECONCILIATION_REQUIRED'){
-    status('Estado pendente ou incerto. Consulta a última ordem DEMO.','bad');
-  }else{
-    status(r.orderSent?'Estado na cTrader DEMO: '+r.orderStatus:'Ciclo DEMO concluído sem enviar ordem.','ok');
+  let r;
+  try{
+    r=await api('POST',{action:'run-once',confirmation:'EXECUTAR DEMO'});
+  }catch(e){
+    if(!e.serverResponse&&clientState){
+      clientState={...clientState,reconciliationRequired:true};
+      asText('orderState','Resposta do painel indisponível. Atualiza o estado antes de tentar outro ciclo.');
+    }
+    throw e;
   }
+  asText('brokerInfo',[r.date,r.reason||r.code].filter(Boolean).join(' · '));
+  if(r.orderStatus||r.reconciliationRequired||r.orderSent===null||r.action==='RECONCILIATION_REQUIRED'){
+    const order={status:r.orderStatus,orderSent:r.orderSent,resolved:!r.reconciliationRequired};
+    const message=r.action==='RECONCILIATION_REQUIRED'
+      ?'Existe uma ordem pendente. Reconcilia-a antes de continuar.'
+      :orderMessage(order);
+    status(message,order.resolved&&r.orderStatus==='FILLED'?'ok':'bad');
+    if(clientState&&(r.reconciliationRequired||r.orderSent===null||r.action==='RECONCILIATION_REQUIRED')){
+      clientState={...clientState,reconciliationRequired:true,order:r.orderStatus?order:clientState.order};
+    }
+  }else{
+    status(r.action==='DUPLICATE'?'Este sinal já foi processado. Nenhuma nova ordem foi enviada.'
+      :'Ciclo DEMO concluído sem enviar ordem.',r.action==='STOPPED'?'bad':'ok');
+  }
+  const current=await api().catch(()=>null);
+  if(current)renderClient(current);
 });
 button('reconcileOrder',async()=>{
   const {order}=await api('POST',{action:'reconcile-order'});
-  const volume=order.executedVolume==null?'':' · Volume executado: '+order.executedVolume/100;
-  const protection=order.protectionVerified?' · Stop-loss e take-profit verificados':'';
-  asText('brokerInfo',order.status+volume+protection);
-  status(order.resolved?'Reconciliação DEMO concluída.':'Ordem ainda por reconciliar.',order.resolved?'ok':'bad');
+  renderClient({...clientState,order,reconciliationRequired:!order.resolved});
+  status(orderMessage(order),order.resolved&&order.status==='FILLED'?'ok':'bad');
 });
 button('pause',async()=>{await api('POST',{action:'pause'});renderClient(await api());status('Agente DEMO pausado.','ok')});
 if(new URL(location.href).searchParams.get('connection')){

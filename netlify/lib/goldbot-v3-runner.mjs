@@ -120,9 +120,18 @@ const orderKey = accountId => `demo-order/${accountId}`;
 const orderOutcome = order => ({
   uid:order.uid,date:order.date,clientOrderId:order.clientOrderId,
   action:order.status==='FILLED'&&order.resolved?'BUY_DEMO':order.status,
-  orderStatus:order.status,orderSent:order.status==='UNKNOWN'||order.status==='SUBMITTING'?null:true,
+  orderStatus:order.status,orderSent:order.orderSent??
+    (['UNKNOWN','SUBMITTING'].includes(order.status)?null:true),
   reconciliationRequired:!order.resolved
 });
+
+export async function getDemoOrderState(user,s=store()){
+  const order=user.account&&await s.get(orderKey(user.account.accountId),{type:'json'});
+  return {
+    reconciliationRequired:Boolean(order&&!order.resolved),
+    order:order?.uid===user.id?order:null
+  };
+}
 
 export async function reconcileTenantDemo(user,{s=store(),broker=withDemoBroker}={}){
   requireV3(user.account,'NOT_LINKED','Conta demo ainda não vinculada.',409);
@@ -156,7 +165,7 @@ export async function runTenantDaily(uid,{signal,fx,now=new Date().toISOString()
   const reserved=await s.setJSON(id,{status:'RESERVED',date,uid,at:now},{onlyIfNew:true});
   if(!reserved.modified)return {uid,action:'DUPLICATE',date};
   // Once reserved, NEVER blindly retry, even on network error or unknown broker result.
-  let submissionAttempted=false;
+  let submissionAttempted=false, sent=false;
   try{
     const latest=await getTenant(uid,s);
     const switchNow=await getGlobalControl(s);
@@ -176,36 +185,46 @@ export async function runTenantDaily(uid,{signal,fx,now=new Date().toISOString()
       requireV3(snapshot.accessRights===0||snapshot.accessRights==null,'RIGHTS','Corretora não permite negociação nesta conta.');
       const prepared=await prepareBuy(ctx,{close:planSignal.close??planSignal.lastClose??planSignal.closePrice,
         eurUsd:fx,balance:snapshot.balance,currency:snapshot.currency,limitedRisk:snapshot.isLimitedRisk});
-      // Final global kill-switch read directly before transmitting request.
-      const active=await getTenant(uid,s),guard=await getGlobalControl(s);
-      canArm({user:active,globalEnabled:globalDemoAllowed()&&guard.enabled===true,
-        connected:Boolean(active.account),scope:active.account?.scope});
-      requireV3(active.armed===true,'PAUSED','O agente DEMO está pausado.');
-      requireV3(String(active.account.accountId)===String(ctx.accountId),
-        'ACCOUNT_CHANGED','Conta DEMO alterada antes do envio.');
       const intent=demoOrderIntent(ctx,{symbolId:prepared.symbolId,plan:prepared.plan,uid,date});
       const reservation=await s.setJSON(key,intent,prior?.etag?{onlyIfMatch:prior.etag}:{onlyIfNew:true});
       requireV3(reservation.modified,'BUSY','Outra execução reservou a conta DEMO.',409);
       const row=await s.getWithMetadata(key,{type:'json'});
       requireV3(row?.etag&&row.data.clientOrderId===intent.clientOrderId,
         'BUSY','Reserva da conta DEMO indisponível.',409);
+      // Recheck both controls after reserving, immediately before submission.
+      try{
+        const active=await getTenant(uid,s),guard=await getGlobalControl(s);
+        canArm({user:active,globalEnabled:globalDemoAllowed()&&guard.enabled===true,
+          connected:Boolean(active.account),scope:active.account?.scope});
+        requireV3(active.armed===true,'PAUSED','O agente DEMO está pausado.');
+        requireV3(String(active.account.accountId)===String(ctx.accountId),
+          'ACCOUNT_CHANGED','Conta DEMO alterada antes do envio.');
+      }catch(err){
+        const cleared=await s.setJSON(key,{...intent,status:'NOT_SENT',orderSent:false,resolved:true},
+          {onlyIfMatch:row.etag});
+        requireV3(cleared.modified,'BUSY','A reserva foi alterada em simultâneo.',409);
+        throw err;
+      }
       let receipt;
       try{
         submissionAttempted=true;
-        receipt=await submitDemoBuy(ctx,intent);
+        receipt=await submitDemoBuy(ctx,intent,()=>{sent=true;});
       }catch(err){
-        receipt={...intent,status:'UNKNOWN',code:err instanceof V3Error?err.code:'UNAVAILABLE'};
+        const code=err instanceof V3Error?err.code:'UNAVAILABLE';
+        const notSent=!sent&&['NOT_CONNECTED','SEND_FAILED','LIVE_BLOCK','VIEW_ONLY'].includes(code);
+        receipt={...intent,status:notSent?'NOT_SENT':'UNKNOWN',orderSent:sent||(notSent?false:null),
+          resolved:notSent,code};
       }
       const observed=await s.setJSON(key,receipt,{onlyIfMatch:row.etag});
       requireV3(observed.modified,'BUSY','A ordem foi atualizada em simultâneo.',409);
       const current=await s.getWithMetadata(key,{type:'json'});
       requireV3(current?.data?.clientOrderId===intent.clientOrderId,
         'BUSY','A intenção da conta DEMO foi alterada.',409);
-      if(current.data.reconciledAt)return current.data;
+      if(current.data.resolved||current.data.reconciledAt)return current.data;
       try{
-        receipt=await reconcileDemoOrder(ctx,receipt);
+        receipt=await reconcileDemoOrder(ctx,current.data);
       }catch(err){
-        receipt={...receipt,reconciliationCode:err instanceof V3Error?err.code:'UNAVAILABLE'};
+        receipt={...current.data,reconciliationCode:err instanceof V3Error?err.code:'UNAVAILABLE'};
       }
       const write=await s.setJSON(key,receipt,{onlyIfMatch:current.etag});
       requireV3(write.modified,'BUSY','A ordem foi atualizada em simultâneo.',409);
@@ -213,13 +232,13 @@ export async function runTenantDaily(uid,{signal,fx,now=new Date().toISOString()
     });
     const outcome=orderOutcome(result);
     await s.setJSON(id,{status:result.status,uid,date,at:now,receipt:result});
-    await saveTenant(uid,{...(result.resolved?{}:{armed:false}),lastDecision:{at:now,...outcome}},s);
+    await saveTenant(uid,{...(result.resolved&&result.status!=='NOT_SENT'?{}:{armed:false}),lastDecision:{at:now,...outcome}},s);
     return outcome;
   }catch(err){
     const code=err instanceof V3Error?err.code:'UNAVAILABLE';
     await s.setJSON(id,{status:submissionAttempted?'UNKNOWN':'BLOCKED',uid,date,at:now,code});
     await saveTenant(uid,{armed:false,lastDecision:{at:now,action:'STOPPED',date,code}},s);
-    return {uid,action:'STOPPED',date,code,orderSent:submissionAttempted?null:false};
+    return {uid,action:'STOPPED',date,code,orderSent:sent||(submissionAttempted?null:false),reconciliationRequired:submissionAttempted};
   }
 }
 export async function runScheduledDemo(){

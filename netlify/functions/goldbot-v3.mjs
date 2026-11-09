@@ -3,7 +3,7 @@ import {readEnv} from '../lib/goldbot-services.mjs';
 import {V3Error,requireV3,canArm,safeKeyId} from '../lib/goldbot-v3-policy.mjs';
 import {store,isAdmin,requireAdmin,requireTenant,createTenant,listTenants,getTenant,
   saveTenant,publicTenant,startOAuth,v3Response,v3ErrorResponse} from '../lib/goldbot-v3-store.mjs';
-import {getUsableTenantToken,previewDaily,eurUsdDaily,runTenantDaily,reconcileTenantDemo,getGlobalControl,globalDemoAllowed} from '../lib/goldbot-v3-runner.mjs';
+import {getUsableTenantToken,previewDaily,eurUsdDaily,runTenantDaily,reconcileTenantDemo,getDemoOrderState,getGlobalControl,globalDemoAllowed} from '../lib/goldbot-v3-runner.mjs';
 import {withDemoBroker,getBrokerSnapshot} from '../lib/goldbot-v3-broker.mjs';
 
 const noStore={CacheControl:'no-store'};
@@ -16,7 +16,7 @@ export default async function goldbotV3(req){
       if(isAdmin(req))return v3Response({role:'admin',users:await listTenants(s),
         globalEnabled:globalDemoAllowed()&&master.enabled===true,environment:'demo'});
       const user=await requireTenant(req,s);
-      const result={role:'user',user:publicTenant(user),environment:'demo',
+      const result={role:'user',user:publicTenant(user),environment:'demo',...await getDemoOrderState(user,s),
         globalEnabled:globalDemoAllowed()&&master.enabled===true};
       if(url.searchParams.get('live')==='1' && user.account){
         const accessToken=await getUsableTenantToken(user.id,s);
@@ -61,6 +61,9 @@ export default async function goldbotV3(req){
     }
     if(action==='arm'){
       requireV3(data.confirmation==='ATIVAR DEMO','CONFIRM','Confirma explicitamente a negociação na conta DEMO.');
+      const state=await getDemoOrderState(user,s);
+      requireV3(!state.reconciliationRequired,'RECONCILIATION_REQUIRED',
+        'Novas operações bloqueadas. Reconcilia primeiro a ordem DEMO pendente.',409);
       const master=await getGlobalControl(s);
       canArm({user,globalEnabled:globalDemoAllowed()&&master.enabled===true,
         connected:Boolean(user.account),scope:user.account?.scope});
@@ -72,6 +75,9 @@ export default async function goldbotV3(req){
     }
     if(action==='run-once'){
       requireV3(data.confirmation==='EXECUTAR DEMO','CONFIRM','Confirma o ciclo exclusivamente DEMO.');
+      const state=await getDemoOrderState(user,s);
+      requireV3(!state.reconciliationRequired,'RECONCILIATION_REQUIRED',
+        'Novas operações bloqueadas. Reconcilia primeiro a ordem DEMO pendente.',409);
       const master=await getGlobalControl(s);
       canArm({user,globalEnabled:globalDemoAllowed()&&master.enabled===true,
         connected:Boolean(user.account),scope:user.account?.scope});
