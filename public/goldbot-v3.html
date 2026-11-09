@@ -47,7 +47,7 @@ button{height:51px;border-radius:12px;padding:0 16px;border:1px solid #46434a;ba
 <div class="stats"><div class="stat"><small>Utilizador</small><strong id="displayName">—</strong></div><div class="stat"><small>Conta demo</small><strong id="displayAccount">Não ligada</strong></div><div class="stat"><small>Autorização</small><strong id="displayScope">Pendente</strong></div></div>
 <div class="form" style="margin-top:18px"><div class="field"><label for="demoLogin">Número da conta DEMO cTrader</label><input id="demoLogin" inputmode="numeric" type="text" placeholder="Número da conta demo" maxlength="12"></div><button id="connect">Autorizar conta demo</button></div><div class="btnrow"><button id="consult" class="quiet">Consultar saldo da corretora</button><button id="preview" class="quiet">Analisar sinal sem negociar</button></div><div class="hint" id="brokerInfo">Não foram feitas consultas adicionais à corretora.</div></section>
 <section class="card red"><h2>Controlo de ordens DEMO</h2><p>O GoldBot só pode abrir uma compra virtual na corretora com stop de proteção quando existir um sinal validado, autorização de negociação, risco permitido e ativação expressa.</p>
-<div class="btnrow"><button id="arm" class="primary">Ativar agente DEMO</button><button id="runOnce" class="quiet">Executar ciclo DEMO agora</button><button id="pause" class="danger">Pausar agente</button></div><div class="hint" id="clientState">Desativado por segurança.</div></section>
+<div class="btnrow"><button id="arm" class="primary">Ativar agente DEMO</button><button id="runOnce" class="quiet">Executar ciclo DEMO agora</button><button id="reconcileOrder" class="quiet">Reconciliar última ordem DEMO</button><button id="pause" class="danger">Pausar agente</button></div><div class="hint" id="clientState">Desativado por segurança.</div></section>
 <section class="card gold"><h2>Regras de proteção</h2><div class="stats"><div class="stat"><small>Risco máximo estimado / ordem</small><strong>0,5%</strong></div><div class="stat"><small>Proteção de stop</small><strong>2%</strong></div><div class="stat"><small>Limite de posições</small><strong>1</strong></div></div><p style="margin-top:13px">Limites de exposição, confirmação de cotação, sem duplicações e pausa por perda de 2% do saldo inicial. Os stops podem sofrer slippage e não garantem o valor de perda previsto.</p></section>
 </div>
 <footer class="privacy"><span><b>GoldBot AI 3.0</b> · Portal individual, integração DEMO</span><span>Sem promessas de lucro · Nenhuma conta real autorizada</span></footer>
@@ -132,7 +132,18 @@ button('runOnce',async()=>{
   if(!confirm('Executar um ciclo de análise agora? Se houver sinal válido e limites cumpridos, poderá abrir UMA ordem DEMO.'))return;
   const r=await api('POST',{action:'run-once',confirmation:'EXECUTAR DEMO'});
   asText('brokerInfo',(r.action||'SEM_SINAL')+' · '+(r.date||'')+' · '+(r.reason||r.code||''));
-  status(r.orderSent?'Ciclo DEMO enviado à corretora. Confirma o resultado no cTrader.':'Ciclo DEMO concluído sem enviar ordem.','ok');
+  if(r.reconciliationRequired||r.orderSent===null||r.action==='RECONCILIATION_REQUIRED'){
+    status('Estado pendente ou incerto. Consulta a última ordem DEMO.','bad');
+  }else{
+    status(r.orderSent?'Estado na cTrader DEMO: '+r.orderStatus:'Ciclo DEMO concluído sem enviar ordem.','ok');
+  }
+});
+button('reconcileOrder',async()=>{
+  const {order}=await api('POST',{action:'reconcile-order'});
+  const volume=order.executedVolume==null?'':' · Volume executado: '+order.executedVolume/100;
+  const protection=order.protectionVerified?' · Stop-loss e take-profit verificados':'';
+  asText('brokerInfo',order.status+volume+protection);
+  status(order.resolved?'Reconciliação DEMO concluída.':'Ordem ainda por reconciliar.',order.resolved?'ok':'bad');
 });
 button('pause',async()=>{await api('POST',{action:'pause'});renderClient(await api());status('Agente DEMO pausado.','ok')});
 if(new URL(location.href).searchParams.get('connection')){

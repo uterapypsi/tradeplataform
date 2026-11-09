@@ -5,6 +5,7 @@ export const PT=Object.freeze({APP_REQ:2100,APP_RES:2101,ACCOUNT_REQ:2102,ACCOUN
   NEW_ORDER:2106,ASSETS_REQ:2112,ASSETS_RES:2113,SYMBOL_LIST_REQ:2114,SYMBOL_LIST_RES:2115,
   SYMBOL_REQ:2116,SYMBOL_RES:2117,TRADER_REQ:2121,TRADER_RES:2122,RECONCILE_REQ:2124,
   RECONCILE_RES:2125,EXECUTION:2126,SPOT_REQ:2127,SPOT_RES:2128,SPOT:2131,
+  ORDER_LIST_REQ:2175,ORDER_LIST_RES:2176,ORDER_DETAILS_REQ:2181,ORDER_DETAILS_RES:2182,
   ORDER_ERROR:2132,ERROR:2142,ACCOUNT_LIST_REQ:2149,ACCOUNT_LIST_RES:2150,HEARTBEAT:51});
 
 export class DemoSocket {
@@ -143,19 +144,81 @@ export async function prepareBuy(ctx,{close,eurUsd,balance,currency,limitedRisk=
   const plan=sizeDemoBuy({balance,currency,eurUsd,ask:quote.ask,bid:quote.bid,close,
     volMin:Number(full.minVolume),volMax:Number(full.maxVolume),volStep:Number(full.stepVolume),
     limitedRisk,tradable:full.tradingMode===0||full.tradingMode==null});
-  return {quote,plan,symbolId:brief.symbolId,brokerSymbol:brief.symbolName};
+  return {quote,plan:{...plan,digits:full.digits},symbolId:brief.symbolId,brokerSymbol:brief.symbolName};
 }
-export async function submitDemoBuy(ctx,{symbolId,plan,uid,date}){
-  requireV3(!ctx.account.isLive,'LIVE_BLOCK','Contas reais estão bloqueadas.',403);
+const executionStates = {2:'ACCEPTED',3:'FILLED',4:'REPLACED',5:'CANCELLED',
+  6:'EXPIRED',7:'REJECTED',11:'PARTIALLY_FILLED'};
+const orderStates = {1:'ACCEPTED',2:'FILLED',3:'REJECTED',4:'EXPIRED',5:'CANCELLED'};
+const terminalStates = ['FILLED','REJECTED','EXPIRED','CANCELLED'];
+
+export function demoOrderIntent(ctx,{symbolId,plan,uid,date}){
+  return {uid,date,accountId:String(ctx.accountId),symbolId,volume:plan.volume,
+    relativeStopLoss:plan.relativeStopLoss,relativeTakeProfit:plan.relativeTakeProfit,
+    priceTick:10 ** -plan.digits,
+    clientOrderId:`GB3-${uid}-${date.replaceAll('-','')}`,submittedAt:Date.now(),
+    status:'SUBMITTING',resolved:false};
+}
+
+export async function submitDemoBuy(ctx,intent){
+  requireV3(isDemoAccount(ctx.account),'LIVE_BLOCK','Apenas contas DEMO são permitidas.',403);
   requireV3(isTradeScope(ctx.scope),'VIEW_ONLY','Falta autorizar negociação na cTrader.',403);
-  const clientOrderId=`GB3-${uid}-${date.replaceAll('-','')}`;
-  const payload={ctidTraderAccountId:ctx.accountId,symbolId,orderType:1,tradeSide:1,
-    volume:plan.volume,relativeStopLoss:plan.relativeStopLoss,
-    relativeTakeProfit:plan.relativeTakeProfit,clientOrderId,label:'GOLDBOT-DEMO-V3',comment:'Conta demonstracao, estrategia diaria automatica'};
-  // Execution response is evidence of accepted/rejected event; no blind retries.
-  const event=await ctx.socket.call(PT.NEW_ORDER,PT.EXECUTION,payload);
-  const kind=Number(event.executionType);
-  requireV3([2,3,4,11].includes(kind),'ORDER_NOT_CONFIRMED','Ordem sem confirmação positiva; verifica no cTrader antes de agir.',502);
-  return {clientOrderId,executionType:kind,orderId:event.order?.orderId?String(event.order.orderId):null,
-    at:new Date().toISOString(),volume:plan.volume,side:'BUY',symbol:'XAUUSD',environment:'DEMO'};
+  const {symbolId,volume,relativeStopLoss,relativeTakeProfit,clientOrderId}=intent;
+  const event=await ctx.socket.call(PT.NEW_ORDER,PT.EXECUTION,{
+    ctidTraderAccountId:ctx.accountId,symbolId,orderType:1,tradeSide:1,volume,
+    relativeStopLoss,relativeTakeProfit,clientOrderId,label:'GOLDBOT-DEMO-V3',
+    comment:'Conta demonstracao, estrategia diaria automatica'});
+  const matches=String(event.ctidTraderAccountId)===intent.accountId &&
+    (!event.order?.clientOrderId || event.order.clientOrderId===clientOrderId);
+  return {...intent,status:matches?(executionStates[event.executionType]||'UNKNOWN'):'UNKNOWN',
+    orderId:matches&&event.order?.orderId!=null?String(event.order.orderId):null};
+}
+
+export async function reconcileDemoOrder(ctx,intent){
+  requireV3(isDemoAccount(ctx.account)&&String(ctx.accountId)===intent.accountId,
+    'ACCOUNT_MISMATCH','A intenção pertence a outra conta DEMO.',403);
+  const account={ctidTraderAccountId:ctx.accountId};
+  const read=async(type,expected,params={})=>{
+    const reply=await ctx.socket.call(type,expected,{...account,...params});
+    requireV3(String(reply.ctidTraderAccountId)===intent.accountId,
+      'ACCOUNT_MISMATCH','A resposta pertence a outra conta DEMO.',502);
+    return reply;
+  };
+
+  const matching=order=>intent.orderId
+    ? String(order.orderId)===intent.orderId
+    : order.clientOrderId===intent.clientOrderId;
+  let orderId=intent.orderId;
+  if(!orderId){
+    const pending=((await read(PT.RECONCILE_REQ,PT.RECONCILE_RES)).order||[]).filter(matching);
+    const candidates=pending.length?pending:(await read(PT.ORDER_LIST_REQ,PT.ORDER_LIST_RES,{
+      fromTimestamp:Math.max(0,intent.submittedAt-60_000),toTimestamp:Date.now()
+    })).order?.filter(matching)||[];
+    if(candidates.length!==1 || candidates[0].orderId==null)return intent;
+    orderId=String(candidates[0].orderId);
+  }
+  const {order}=await read(PT.ORDER_DETAILS_REQ,PT.ORDER_DETAILS_RES,{orderId});
+  requireV3(order && String(order.orderId)===orderId &&
+    (!order.clientOrderId||order.clientOrderId===intent.clientOrderId) &&
+    String(order.tradeData?.symbolId)===String(intent.symbolId) &&
+    Number(order.tradeData?.tradeSide)===1 && Number(order.tradeData?.volume)===intent.volume,
+    'ORDER_MISMATCH','Os dados da ordem DEMO não correspondem à intenção.',502);
+  const executedVolume=Number(order.executedVolume??0);
+  requireV3(Number.isSafeInteger(executedVolume)&&executedVolume>=(intent.executedVolume??0)&&executedVolume<=intent.volume,
+    'ORDER_VOLUME','Volume executado inválido.',502);
+  let status=orderStates[order.orderStatus]||'UNKNOWN';
+  if(status==='ACCEPTED'&&executedVolume>0)status='PARTIALLY_FILLED';
+  if((status==='FILLED'&&executedVolume!==intent.volume)||
+    (['PARTIALLY_FILLED','FILLED'].includes(intent.status)&&executedVolume===0))status='UNKNOWN';
+  const positions=executedVolume>0?(await read(PT.RECONCILE_REQ,PT.RECONCILE_RES)).position||[]:[];
+  const position=positions.find(p=>order.positionId!=null &&
+    String(p.positionId)===String(order.positionId));
+  const entry=Number(position?.price), stopLoss=Number(position?.stopLoss), takeProfit=Number(position?.takeProfit);
+  const protectionVerified=Boolean(position && entry>0 && stopLoss>0 && stopLoss<entry && takeProfit>entry &&
+    String(position.tradeData?.symbolId)===String(intent.symbolId) &&
+    Number(position.tradeData?.tradeSide)===1 && Number(position.tradeData?.volume)===executedVolume &&
+    Math.abs(entry-stopLoss-intent.relativeStopLoss/100000)<=intent.priceTick &&
+    Math.abs(takeProfit-entry-intent.relativeTakeProfit/100000)<=intent.priceTick);
+  return {...intent,orderId,status,executedVolume,positionId:order.positionId==null?null:String(order.positionId),
+    protectionVerified,resolved:terminalStates.includes(status)&&(executedVolume===0||protectionVerified),
+    reconciledAt:new Date().toISOString()};
 }

@@ -5,7 +5,7 @@ import {evaluate} from '../../public/engine.js';
 import {riskGate,summarizeNews} from '../../public/intelligence.js';
 import {V3,V3Error,requireV3,lastClosedBars,evaluateSignal,canArm} from './goldbot-v3-policy.mjs';
 import {store,getTenant,saveTenant,unprotect,protect} from './goldbot-v3-store.mjs';
-import {withDemoBroker,getBrokerSnapshot,prepareBuy,submitDemoBuy} from './goldbot-v3-broker.mjs';
+import {withDemoBroker,getBrokerSnapshot,prepareBuy,demoOrderIntent,submitDemoBuy,reconcileDemoOrder} from './goldbot-v3-broker.mjs';
 const clientCreds = () => {
   const read = name => String(
     (typeof Netlify !== 'undefined' && Netlify.env?.get?.(name)) ||
@@ -116,9 +116,36 @@ export async function eurUsdDaily({now=new Date().toISOString()}={}){
 }
 export const globalDemoAllowed=()=>String(readEnv('GOLDBOT_V3_ALLOW_DEMO_ORDERS')||'').toLowerCase()==='true';
 export const getGlobalControl=async(s=store())=>(await s.get('master',{type:'json'}))||{enabled:false};
+const orderKey = accountId => `demo-order/${accountId}`;
+const orderOutcome = order => ({
+  uid:order.uid,date:order.date,clientOrderId:order.clientOrderId,
+  action:order.status==='FILLED'&&order.resolved?'BUY_DEMO':order.status,
+  orderStatus:order.status,orderSent:order.status==='UNKNOWN'||order.status==='SUBMITTING'?null:true,
+  reconciliationRequired:!order.resolved
+});
+
+export async function reconcileTenantDemo(user,{s=store(),broker=withDemoBroker}={}){
+  requireV3(user.account,'NOT_LINKED','Conta demo ainda não vinculada.',409);
+  const key=orderKey(user.account.accountId);
+  const row=await s.getWithMetadata(key,{type:'json'});
+  requireV3(row?.data?.uid===user.id,'NO_INTENT','Não há uma intenção para este utilizador e conta DEMO.',404);
+  const intent=row.data;
+  if(intent.resolved)return intent;
+  requireV3(intent.status!=='SUBMITTING'||Date.now()-intent.submittedAt>60_000,
+    'IN_PROGRESS','Envio em curso. Volta a consultar em instantes.',409);
+  const accessToken=await getUsableTenantToken(user.id,s);
+  const result=await broker({...clientCreds(),accessToken,login:user.account.login,
+    accountId:user.account.accountId},ctx=>reconcileDemoOrder(ctx,intent));
+  const write=await s.setJSON(key,result,{onlyIfMatch:row.etag});
+  requireV3(write.modified,'BUSY','A ordem foi atualizada em simultâneo. Volta a consultar.',409);
+  return result;
+}
+
 export async function runTenantDaily(uid,{signal,fx,now=new Date().toISOString(),s=store(),broker=withDemoBroker}={}){
   const tenant=await getTenant(uid,s);
   if(!tenant?.active||!tenant.armed)return {uid,action:'DISARMED'};
+  const priorOrder=tenant.account&&await s.get(orderKey(tenant.account.accountId),{type:'json'});
+  if(priorOrder&&!priorOrder.resolved)return {uid,action:'RECONCILIATION_REQUIRED',orderSent:false};
   const master=await getGlobalControl(s);
   canArm({user:tenant,globalEnabled:globalDemoAllowed()&&master.enabled===true,
     connected:Boolean(tenant.account),scope:tenant.account?.scope});
@@ -129,6 +156,7 @@ export async function runTenantDaily(uid,{signal,fx,now=new Date().toISOString()
   const reserved=await s.setJSON(id,{status:'RESERVED',date,uid,at:now},{onlyIfNew:true});
   if(!reserved.modified)return {uid,action:'DUPLICATE',date};
   // Once reserved, NEVER blindly retry, even on network error or unknown broker result.
+  let submissionAttempted=false;
   try{
     const latest=await getTenant(uid,s);
     const switchNow=await getGlobalControl(s);
@@ -137,6 +165,10 @@ export async function runTenantDaily(uid,{signal,fx,now=new Date().toISOString()
     const accessToken=await getUsableTenantToken(uid,s);
     const creds=clientCreds();
     const result=await broker({...creds,accessToken,login:latest.account.login,accountId:latest.account.accountId,tradeRequired:true},async ctx=>{
+      const key=orderKey(ctx.accountId);
+      const prior=await s.getWithMetadata(key,{type:'json'});
+      requireV3(!prior?.data||prior.data.resolved,'RECONCILIATION_REQUIRED',
+        'Existe uma ordem por reconciliar nesta conta DEMO.',409);
       const snapshot=await getBrokerSnapshot(ctx);
       requireV3(snapshot.currency===latest.account.currency,'ACCOUNT_CHANGED','Moeda da conta demo alterada.');
       requireV3(Number.isFinite(latest.initialBalance)&&snapshot.balance>=latest.initialBalance*.98,
@@ -148,16 +180,46 @@ export async function runTenantDaily(uid,{signal,fx,now=new Date().toISOString()
       const active=await getTenant(uid,s),guard=await getGlobalControl(s);
       canArm({user:active,globalEnabled:globalDemoAllowed()&&guard.enabled===true,
         connected:Boolean(active.account),scope:active.account?.scope});
-      return submitDemoBuy(ctx,{symbolId:prepared.symbolId,plan:prepared.plan,uid,date});
+      requireV3(active.armed===true,'PAUSED','O agente DEMO está pausado.');
+      requireV3(String(active.account.accountId)===String(ctx.accountId),
+        'ACCOUNT_CHANGED','Conta DEMO alterada antes do envio.');
+      const intent=demoOrderIntent(ctx,{symbolId:prepared.symbolId,plan:prepared.plan,uid,date});
+      const reservation=await s.setJSON(key,intent,prior?.etag?{onlyIfMatch:prior.etag}:{onlyIfNew:true});
+      requireV3(reservation.modified,'BUSY','Outra execução reservou a conta DEMO.',409);
+      const row=await s.getWithMetadata(key,{type:'json'});
+      requireV3(row?.etag&&row.data.clientOrderId===intent.clientOrderId,
+        'BUSY','Reserva da conta DEMO indisponível.',409);
+      let receipt;
+      try{
+        submissionAttempted=true;
+        receipt=await submitDemoBuy(ctx,intent);
+      }catch(err){
+        receipt={...intent,status:'UNKNOWN',code:err instanceof V3Error?err.code:'UNAVAILABLE'};
+      }
+      const observed=await s.setJSON(key,receipt,{onlyIfMatch:row.etag});
+      requireV3(observed.modified,'BUSY','A ordem foi atualizada em simultâneo.',409);
+      const current=await s.getWithMetadata(key,{type:'json'});
+      requireV3(current?.data?.clientOrderId===intent.clientOrderId,
+        'BUSY','A intenção da conta DEMO foi alterada.',409);
+      if(current.data.reconciledAt)return current.data;
+      try{
+        receipt=await reconcileDemoOrder(ctx,receipt);
+      }catch(err){
+        receipt={...receipt,reconciliationCode:err instanceof V3Error?err.code:'UNAVAILABLE'};
+      }
+      const write=await s.setJSON(key,receipt,{onlyIfMatch:current.etag});
+      requireV3(write.modified,'BUSY','A ordem foi atualizada em simultâneo.',409);
+      return receipt;
     });
-    await s.setJSON(id,{status:'CONFIRMED',uid,date,at:now,receipt:result});
-    await saveTenant(uid,{lastDecision:{at:now,action:'BUY_DEMO',date,clientOrderId:result.clientOrderId}},s);
-    return {uid,action:'BUY_DEMO',date,clientOrderId:result.clientOrderId};
+    const outcome=orderOutcome(result);
+    await s.setJSON(id,{status:result.status,uid,date,at:now,receipt:result});
+    await saveTenant(uid,{...(result.resolved?{}:{armed:false}),lastDecision:{at:now,...outcome}},s);
+    return outcome;
   }catch(err){
     const code=err instanceof V3Error?err.code:'UNAVAILABLE';
-    await s.setJSON(id,{status:'UNKNOWN_OR_BLOCKED',uid,date,at:now,code});
+    await s.setJSON(id,{status:submissionAttempted?'UNKNOWN':'BLOCKED',uid,date,at:now,code});
     await saveTenant(uid,{armed:false,lastDecision:{at:now,action:'STOPPED',date,code}},s);
-    return {uid,action:'STOPPED',date,code};
+    return {uid,action:'STOPPED',date,code,orderSent:submissionAttempted?null:false};
   }
 }
 export async function runScheduledDemo(){

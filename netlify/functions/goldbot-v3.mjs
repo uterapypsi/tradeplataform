@@ -3,7 +3,7 @@ import {readEnv} from '../lib/goldbot-services.mjs';
 import {V3Error,requireV3,canArm,safeKeyId} from '../lib/goldbot-v3-policy.mjs';
 import {store,isAdmin,requireAdmin,requireTenant,createTenant,listTenants,getTenant,
   saveTenant,publicTenant,startOAuth,v3Response,v3ErrorResponse} from '../lib/goldbot-v3-store.mjs';
-import {getUsableTenantToken,previewDaily,eurUsdDaily,runTenantDaily,getGlobalControl,globalDemoAllowed} from '../lib/goldbot-v3-runner.mjs';
+import {getUsableTenantToken,previewDaily,eurUsdDaily,runTenantDaily,reconcileTenantDemo,getGlobalControl,globalDemoAllowed} from '../lib/goldbot-v3-runner.mjs';
 import {withDemoBroker,getBrokerSnapshot} from '../lib/goldbot-v3-broker.mjs';
 
 const noStore={CacheControl:'no-store'};
@@ -67,6 +67,9 @@ export default async function goldbotV3(req){
       await saveTenant(user.id,{armed:true},s);
       return v3Response({ok:true,armed:true,message:'Conta DEMO armada para executar somente sinais válidos, respeitando os limites de risco.'});
     }
+    if(action==='reconcile-order'){
+      return v3Response({order:await reconcileTenantDemo(user,{s})});
+    }
     if(action==='run-once'){
       requireV3(data.confirmation==='EXECUTAR DEMO','CONFIRM','Confirma o ciclo exclusivamente DEMO.');
       const master=await getGlobalControl(s);
@@ -77,7 +80,7 @@ export default async function goldbotV3(req){
       if(signal.action!=='BUY')return v3Response({orderSent:false,...signal});
       const fx=await eurUsdDaily();
       const outcome=await runTenantDaily(user.id,{signal,fx,s});
-      return v3Response({orderSent:outcome.action==='BUY_DEMO',...outcome});
+      return v3Response({orderSent:false,...outcome});
     }
     if(action==='preview'){
       const signal=await previewDaily();
