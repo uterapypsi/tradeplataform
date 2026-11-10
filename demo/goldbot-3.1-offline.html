@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d0e11">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>GoldBot AI 3.1 · Demonstração offline</title>
+<style>
+:root{--bg:#0d0e11;--card:#17181c;--card2:#1b1c21;--stroke:#303138;--ink:#f3eee7;--dim:#a4a3ab;--gold:#e7bf72;--violet:#ae99d9;--blue:#96b9ed;--red:#d898a5;--green:#99d1b1}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 90% -10%,rgba(130,99,163,.1),transparent 46%),var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit}button{cursor:pointer}button:disabled{opacity:.58;cursor:wait}[hidden]{display:none!important}a{text-decoration:none;color:inherit}:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.shell{max-width:1100px;margin:auto;padding:0 26px 65px}
+.top{height:94px;border-bottom:1px solid #26272d;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}.emblem{width:46px;height:46px;display:grid;place-items:center;background:#272218;border:1px solid #57472c;border-radius:14px;color:var(--gold);font-size:24px;font-weight:850}
+.brand strong{display:block;letter-spacing:.12em;font-size:18px}.brand em{font-style:normal;color:var(--gold)}.brand small{display:block;font-size:10px;letter-spacing:.2em;color:#aaa4a0;text-transform:uppercase}
+.back{border:1px solid #3f382b;background:#1d1a16;padding:9px 14px;color:#e6cea5;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap}
+.hero{display:grid;grid-template-columns:1fr 205px;align-items:end;gap:24px;padding:42px 0 28px}.overline{font-size:11px;letter-spacing:.23em;color:var(--gold);text-transform:uppercase;font-weight:800}.hero h1{font-weight:750;letter-spacing:-.05em;font-size:clamp(36px,5.8vw,56px);line-height:1.07;margin:12px 0}.hero h1 span{font-family:Georgia,serif;color:var(--gold);font-weight:400}.hero p{color:#aeadb4;max-width:610px;line-height:1.75;margin:12px 0 0;font-size:13px}
+.mode{background:linear-gradient(145deg,#272119,#16171a);border:1px solid #53422c;border-radius:20px;padding:17px}.mode label{display:block;font-size:11px;letter-spacing:.16em;color:#dbcaac;text-transform:uppercase;font-weight:850}.mode strong{display:block;font-size:25px;letter-spacing:-.04em;margin-top:16px}.mode small{display:block;font-size:11px;color:#aba49a}
+.card{background:linear-gradient(180deg,#19191e,#15161a);border:1px solid var(--stroke);border-radius:20px;padding:23px;box-shadow:0 15px 35px rgba(0,0,0,.16);margin-top:15px}.card.auth{border-color:#4b3d62;background:linear-gradient(140deg,#1f1a26,#16151b)}.card.blue{border-top:2px solid #6a8bc3}.card.red{border-top:2px solid #aa6977}.card.gold{border-top:2px solid #ad8242}
+.card h2{font-size:21px;letter-spacing:-.035em;margin:0 0 7px}.card p{font-size:12px;line-height:1.75;color:var(--dim);margin:0 0 15px}.sectionhead{display:flex;align-items:center;justify-content:space-between;gap:10px}.tag{font-size:10px;letter-spacing:.15em;text-transform:uppercase;font-weight:850;color:#e0c5ff;background:#292035;padding:7px 10px;border:1px solid #584373;border-radius:30px}
+.form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.field{min-width:0}.field label{display:block;color:#cfb6e7;text-transform:uppercase;letter-spacing:.13em;font-size:10px;font-weight:850;margin-bottom:8px}
+input{width:100%;min-width:0;height:51px;border:1px solid #4f4261;border-radius:12px;background:#101015;color:#eee;padding:0 14px;outline:none;font-size:16px}input:focus{border-color:#b094d8}input::placeholder{color:#777080}
+button{height:51px;border-radius:12px;padding:0 16px;border:1px solid #46434a;background:#26272d;color:#efeadf;font-weight:780;font-size:13px;white-space:nowrap}.primary{color:#2b1c0e;border-color:#cfa75f;background:linear-gradient(125deg,#f5db9f,#d8ac59)}.danger{background:#301c22;border-color:#693a45;color:#efb9c2}.quiet{background:#1d1f24}.btnrow{display:flex;flex-wrap:wrap;gap:9px;margin:13px 0 0}.notice{padding:13px 15px;border-radius:13px;border:1px solid #38323d;background:#211e24;color:#c1b7c7;font-size:12px;margin-top:14px;overflow-wrap:anywhere}.notice.ok{border-color:#345a44;background:#16241b;color:#bce8ca}.notice.bad{border-color:#6a363d;background:#2c191e;color:#ffc9ce}.cols{display:grid;grid-template-columns:1fr 1fr;gap:15px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}.stat{background:#121317;border:1px solid #292b33;border-radius:14px;padding:15px;min-width:0}.stat small{color:#92929c;display:block;font-size:11px}.stat strong{display:block;font-size:18px;letter-spacing:-.025em;overflow-wrap:anywhere;margin-top:9px}
+.rows{display:grid;gap:0}.row{border-bottom:1px solid #2c2e35;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 0}.row:last-child{border:0}.row b{display:block;font-size:13px}.row small{font-size:11px;color:#92949d}.hint{font-size:11px;color:#a4a0a6;line-height:1.65;margin-top:13px}.newkey{padding:16px;border:1px solid #5f522f;border-radius:15px;background:#221e15;margin:15px 0}.newkey small{display:block;color:#c5b388}.newkey code{display:block;margin:9px 0;overflow-wrap:anywhere;user-select:all;color:#fae2a6;font-size:12px}
+.privacy{border-top:1px solid #29292f;margin-top:35px;padding-top:17px;display:flex;justify-content:space-between;gap:12px;color:#96959f;font-size:11px}.privacy b{color:#d2c39d}
+@media(max-width:760px){.shell{padding:0 14px 45px}.top{height:75px}.hero{grid-template-columns:1fr;padding:30px 2px 14px}.mode{display:none}.cols{grid-template-columns:1fr}.form{grid-template-columns:1fr}.form button{width:100%}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:18px}.brand strong{font-size:15px}.back{font-size:11px}.privacy{flex-direction:column}}
+@media(max-width:360px){.shell{padding:0 9px}.brand small{font-size:8px}.hero h1{font-size:32px}}
+select{width:100%;min-height:51px;background:#101015;border:1px solid #4f4261;border-radius:12px;color:var(--ink);padding:0 12px;font:inherit}
+button:disabled{cursor:not-allowed}
+#orderState{font-size:14px;color:var(--ink)}
+#eventLog{margin-bottom:0;color:var(--dim);font-size:13px}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="top"><div class="brand"><span class="emblem" aria-hidden="true">◈</span><span><strong>GOLD<em>BOT</em> AI</strong><small>Demonstração offline</small></span></div><span class="back">OFFLINE · 3.1</span></header>
+<section class="hero"><div><div class="overline">GoldBot AI 3.1 · Versão de clientes</div><h1>Painel do cliente.<br><span>Simulação offline.</span></h1><p>Experimenta as ordens e os bloqueios com uma conta fictícia. Todos os botões funcionam apenas nesta página.</p></div><div class="mode"><label>Ambiente</label><strong>DEMO ONLY</strong><small>Sem ligação à corretora</small></div></section>
+<section class="card auth">
+<div class="sectionhead"><h2>Cenário de teste</h2><span class="tag">Dados fictícios</span></div>
+<div class="form"><div class="field"><label for="scenario">Resultado inicial</label>
+<select id="scenario">
+<option value="accepted">Aceite, execução pendente</option>
+<option value="sent">Enviada, sem confirmação da corretora</option>
+<option value="uncertain">Envio incerto após falha de ligação</option>
+<option value="partial">Parcialmente executada</option>
+<option value="filled">Totalmente executada e protegida</option>
+<option value="rejected">Rejeitada pela corretora</option>
+<option value="cancelled">Cancelada</option>
+<option value="expired">Expirada</option>
+<option value="notSent">Ligação falhou antes do envio</option>
+<option value="unprotected">Executada com proteção incompleta</option>
+<option value="paused">Pausa global de emergência</option>
+<option value="duplicate">Sinal diário duplicado</option>
+</select></div><button id="reset">Repor cenário</button></div>
+<div id="notice" class="notice" role="status"></div>
+</section>
+<div id="client">
+<section class="card blue"><div class="sectionhead"><h2>A minha conta demo</h2><span class="tag">cTrader</span></div><p>Dados fictícios. Podes simular a autorização, consultar o saldo e analisar um sinal de exemplo.</p>
+<div class="stats"><div class="stat"><small>Utilizador</small><strong id="displayName">—</strong></div><div class="stat"><small>Conta demo</small><strong id="displayAccount">Não ligada</strong></div><div class="stat"><small>Autorização</small><strong id="displayScope">Pendente</strong></div></div>
+<div class="form" style="margin-top:18px"><div class="field"><label for="demoLogin">Número da conta DEMO cTrader</label><input id="demoLogin" type="text" readonly placeholder="Número da conta demo" maxlength="12"></div><button id="connect">Autorizar conta demo</button></div><div class="btnrow"><button id="consult" class="quiet">Consultar saldo da corretora</button><button id="preview" class="quiet">Analisar sinal sem negociar</button></div><div class="hint" id="brokerInfo">Não foram feitas consultas adicionais à corretora.</div></section>
+<section class="card red"><h2>Controlo de ordens DEMO</h2><p>Usa os controlos para simular um ciclo. Ordens por reconciliar bloqueiam a ativação e novos ciclos.</p>
+<div class="btnrow"><button id="arm" class="primary">Ativar agente DEMO</button><button id="runOnce" class="quiet">Executar ciclo DEMO agora</button><button id="reconcileOrder" class="quiet">Reconciliar última ordem DEMO</button><button id="pause" class="danger">Pausar agente</button></div><div class="hint" id="clientState">Desativado por segurança.</div><div class="hint" id="orderState" role="status"></div></section>
+<section class="card gold"><h2>Regras de proteção</h2><div class="stats"><div class="stat"><small>Risco máximo estimado / ordem</small><strong>0,5%</strong></div><div class="stat"><small>Proteção de stop</small><strong>2%</strong></div><div class="stat"><small>Limite de posições</small><strong>1</strong></div></div><p style="margin-top:13px">Limites de exposição, confirmação de cotação, sem duplicações e pausa por perda de 2% do saldo inicial. Os stops podem sofrer slippage e não garantem o valor de perda previsto.</p></section>
+</div>
+<section class="card blue"><h2>Registo da simulação</h2><ol id="eventLog" aria-label="Eventos mais recentes primeiro"></ol></section>
+<footer class="privacy"><span><b>GoldBot AI 3.1</b> · Painel offline</span><span>Sem credenciais · Sem ordens externas</span></footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const asText=(id,value)=>{$(id).textContent=value;};
+let clientState;
+function orderMessage(order){
+  const labels={
+    SUBMITTING:'Envio em curso. A aguardar confirmação.',
+    ACCEPTED:'Ordem aceite pela cTrader. Execução pendente.',
+    REPLACED:'Ordem substituída. Execução pendente.',
+    PARTIALLY_FILLED:'Ordem parcialmente executada.',
+    FILLED:'Ordem totalmente executada.',
+    REJECTED:'Ordem rejeitada pela cTrader.',
+    CANCELLED:'Ordem cancelada pela cTrader.',
+    EXPIRED:'Ordem expirada.',
+    NOT_SENT:'Ordem não enviada.'
+  };
+  const label=labels[order.status]||(order.orderSent===true
+    ?'Ordem enviada. Receção e execução por confirmar.'
+    :'Estado da ordem incerto. Envio por confirmar.');
+  const volume=order.executedVolume==null?'':' Volume executado: '+order.executedVolume/100+' unidades.';
+  const protection=order.protectionVerified?' Stop-loss e take-profit verificados.':'';
+  const pending=order.resolved?'':' Reconciliação pendente. Novas operações bloqueadas.';
+  return label+volume+protection+pending;
+}
+function renderOrderControls(r){
+  const u=r.user||{};
+  const blocked=r.reconciliationRequired;
+  $('arm').disabled=u.armed||!u.account||!r.globalEnabled||blocked;
+  $('runOnce').disabled=!u.armed||!r.globalEnabled||blocked;
+  $('reconcileOrder').disabled=!r.order;
+}
+function renderClient(r){
+  clientState=r;
+  const u=r.user||{};
+  asText('displayName',u.name);asText('displayAccount',u.account?.login||'Não ligada');
+  asText('displayScope',u.account?(u.account.scope===1||u.account.scope==='1'?'DEMO autorizada':'Apenas leitura'):'Pendente');
+  asText('clientState',u.armed?'Agente DEMO armado. Próxima decisão no ciclo agendado.':'Agente DEMO pausado.');
+  renderOrderControls(r);
+  asText('orderState',r.order?orderMessage(r.order):r.reconciliationRequired
+    ?'Há uma ordem por reconciliar nesta conta DEMO. Novas operações bloqueadas.'
+    :'');
+  $('demoLogin').value=u.account?.login||'';
+  if(u.lastDecision)asText('brokerInfo',u.lastDecision.action+' · '+u.lastDecision.at+(u.lastDecision.code?' ('+u.lastDecision.code+')':''));
+}
+const completed={status:'FILLED',executedVolume:100,protectionVerified:true,resolved:true};
+const scenarios={
+  accepted:{status:'ACCEPTED',orderSent:true},
+  sent:{status:'UNKNOWN',orderSent:true},
+  uncertain:{status:'UNKNOWN',orderSent:null},
+  partial:{status:'PARTIALLY_FILLED',executedVolume:40,orderSent:true},
+  filled:completed,
+  rejected:{status:'REJECTED',resolved:true},
+  cancelled:{status:'CANCELLED',resolved:true},
+  expired:{status:'EXPIRED',resolved:true},
+  notSent:{status:'NOT_SENT',orderSent:false,resolved:true},
+  unprotected:{status:'FILLED',executedVolume:100,protectionVerified:false}
+};
+let scenario, processed, checks;
+function announce(message, tone=''){
+  asText('notice',message);
+  $('notice').className='notice'+(tone?' '+tone:'');
+  const entry=document.createElement('li');
+  entry.textContent=message;
+  $('eventLog').prepend(entry);
+}
+function refresh(){
+  renderClient(clientState);
+  if(!clientState.globalEnabled)asText('clientState','Pausa global ativa. Novos ciclos bloqueados.');
+}
+function reset(){
+  scenario=$('scenario').value;
+  processed=false;
+  checks=0;
+  clientState={user:{name:'Cliente fictício',account:{login:'100001',scope:1},armed:false},
+    globalEnabled:scenario!=='paused',reconciliationRequired:false,order:null};
+  $('eventLog').replaceChildren();
+  asText('brokerInfo','Saldo fictício disponível para consulta.');
+  refresh();
+  announce(clientState.globalEnabled?'Cenário pronto. Ativa o agente e executa um ciclo simulado.'
+    :'Pausa global simulada. A ativação e a execução estão bloqueadas.');
+}
+function setOrder(order){
+  clientState.order=order;
+  clientState.reconciliationRequired=!order.resolved;
+  if(!order.resolved||order.status==='NOT_SENT')clientState.user.armed=false;
+  refresh();
+  announce(orderMessage(order),order.resolved?'ok':'bad');
+}
+const on=(id,fn)=>$(id).addEventListener('click',fn);
+$('scenario').addEventListener('change',reset);
+on('reset',reset);
+on('connect',()=>announce('A conta fictícia já está autorizada nesta simulação.','ok'));
+on('consult',()=>{
+  asText('brokerInfo','Saldo fictício · 1 000,00 €');
+  announce('Consulta simulada concluída.','ok');
+});
+on('preview',()=>{
+  asText('brokerInfo','Sinal fictício · XAUUSD · COMPRA');
+  announce('Análise simulada concluída. Nenhuma ordem criada.','ok');
+});
+on('arm',()=>{
+  if(!clientState.globalEnabled||clientState.reconciliationRequired)return;
+  clientState.user.armed=true;
+  refresh();
+  announce('Agente armado apenas na simulação.','ok');
+});
+on('pause',()=>{
+  clientState.user.armed=false;
+  refresh();
+  announce('Agente pausado na simulação.');
+});
+on('runOnce',()=>{
+  if(!clientState.globalEnabled||!clientState.user.armed||clientState.reconciliationRequired)return;
+  if(processed||scenario==='duplicate'){
+    announce('Este sinal já foi processado. Nenhuma nova ordem foi criada.','bad');
+    return;
+  }
+  processed=true;
+  setOrder(scenarios[scenario]);
+});
+on('reconcileOrder',()=>{
+  if(!clientState.order||clientState.order.resolved){
+    announce('A última ordem já está reconciliada.');
+    return;
+  }
+  checks++;
+  if(scenario==='unprotected'){
+    announce('O take-profit continua por verificar. O bloqueio mantém-se.','bad');
+  }else if(checks===1){
+    announce('A primeira consulta ainda não confirmou a execução. O bloqueio mantém-se.','bad');
+  }else{
+    setOrder(completed);
+    announce('Reconciliação simulada concluída. O agente continua pausado.','ok');
+  }
+});
+reset();
+</script>
+</body>
+</html>
